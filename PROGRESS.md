@@ -106,6 +106,7 @@
 
 ## Bloqueios
 - 2026-11-12 — **0.4/0.5: projeto Supabase não criado.** Custo cotado US$ 0/mês (org CARDAPIOS, sa-east-1), mas o conector exige confirmação explícita do Peter e ela ainda não veio. Obs.: plano free permite 2 projetos ativos (ERP-CHAPELAO e CARDAPIOS-CLIENTES já ativos). Código de 0.4 e migration de 0.5 prontos; falta criar o projeto, aplicar a migration, preencher `.env.local`, criar o usuário do Peter e trocar o template de e-mail do OTP para mostrar `{{ .Token }}`.
+- 2026-11-12 — **0.8: deploy na Vercel não feito.** Depende do Supabase (sem as variáveis o app responde 503 em tudo menos `/login`) e de OK do Peter para publicar. Também falta remoto no GitHub para o CI (`.github/workflows/ci.yml` já pronto) rodar.
 
 ## Configuração pendente com o Peter
 - [ ] Marco inicial (título, métrica, valor alvo)
@@ -125,3 +126,4 @@
 | 2026-11-12 | 0.5 (parcial) | `supabase/migrations/20261112190000_init.sql`: enums, `settings`, `principles`, `categories`, `inbox_messages`, trigger `updated_at`, RLS (4 políticas por tabela), seed por usuário. Validado em PGlite com `auth` simulado. Falta aplicar no projeto real (ver Bloqueios). |
 | 2026-11-12 | 0.6 | `lib/money.ts` (centavos inteiros, `parseBRL` pt-BR sem float, `formatBRL`, `brlParts`), `lib/dates.ts` (datas ISO de calendário, hoje/hora/meia-noite em SP, mês, semana seg–dom), `lib/metrics/business-days.ts` (workdays + feriados opcionais). 48 testes com TZ=UTC cobrindo virada de dia/mês/ano em SP, 29/02 e fim de semana. |
 | 2026-11-12 | 0.7 (parcial) | `app/manifest.ts` (standalone, #05060A), ícones 180/192/512 + maskable + SVG, splash 1125×2436 (iPhone 11 Pro), meta iOS `black-translucent`, Serwist (`app/sw.ts` + `SerwistProvider`). Build ok; manifest/SW servidos com 200 no `next start`. O navegador embutido não registra SW nenhum (nem um trivial), então o teste real fica para o iPhone com HTTPS, após o deploy (0.8). |
+| 2026-11-12 | 0.8 (parcial) | CI em GitHub Actions (Node 24: `npm ci` → typecheck → lint → test). Local: typecheck/lint ok, 48 testes passando. Deploy pendente (ver Bloqueios). |
