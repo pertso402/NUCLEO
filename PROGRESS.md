@@ -4,13 +4,13 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 0
-**Próxima tarefa:** 0.2
+**Próxima tarefa:** 0.3
 
 ---
 
 ## Fase 0 — Fundação
 - [x] 0.1 Criar projeto Next.js (App Router, TS strict, ESLint, Tailwind) + estrutura de pastas do ARCHITECTURE.md §3
-- [ ] 0.2 Instalar fontes (Unbounded, Geist, Geist Mono) e tokens do DESIGN.md §2–4 em `globals.css` + `tailwind.config`
+- [x] 0.2 Instalar fontes (Unbounded, Geist, Geist Mono) e tokens do DESIGN.md §2–4 em `globals.css` + `tailwind.config`
 - [ ] 0.3 Componentes base: `Button`, `HudCard`, `StatTile`, `Chip`, `GridBackground`, `TabBar`, sidebar desktop
 - [ ] 0.4 Projeto Supabase + clients (server/client/admin) + Auth por e-mail OTP + middleware protegendo `(app)`
 - [ ] 0.5 Migration inicial: `settings`, `principles`, `categories` (com seed), `inbox_messages` + RLS + trigger `updated_at`
@@ -115,3 +115,4 @@ _(nenhum)_
 | data | fase.tarefa | o que foi feito / observações |
 |---|---|---|
 | 2026-11-12 | 0.1 | Next.js 16 + TS strict + ESLint + Tailwind 4; estrutura de pastas do §3 com páginas placeholder; scripts typecheck/lint/test; git init. |
+| 2026-11-12 | 0.2 | Unbounded (next/font/google) + Geist/Geist Mono (pacote geist); tokens Obsidiana Volt em `:root` e mapeados no `@theme` do Tailwind 4 (paleta, escala tipográfica, raios, glows; cores/sombras padrão do Tailwind removidas para impedir valores fora do DS); utilitários `.num` e `.label-instrument`. |

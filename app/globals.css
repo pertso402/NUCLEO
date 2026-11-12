@@ -1,26 +1,171 @@
 @import "tailwindcss";
 
+/* ============================================================
+   NÚCLEO · Design System "Obsidiana Volt" (DESIGN.md §2–4)
+   Dark-only. Todo valor visual sai daqui.
+   ============================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Superfícies */
+  --bg-0: #05060a;
+  --bg-1: #0a0c12;
+  --bg-2: #11141c;
+  --bg-3: #181c27;
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.12);
+
+  /* Texto */
+  --text-0: #f2f4f8;
+  --text-1: #a3abbd;
+  --text-2: #5e6678;
+
+  /* Sinais — cada cor tem UM significado */
+  --volt: #c8ff2e;
+  --volt-dim: #c8ff2e1f;
+  --plasma: #7c5cff;
+  --ion: #2ee6ff;
+  --ember: #ff8a2a;
+  --flare: #ff3d6e;
+  --gold: #ffd24a;
+
+  /* Glows — máx. 1–2 por tela */
+  --glow-volt: 0 0 24px rgba(200, 255, 46, 0.35);
+  --glow-plasma: 0 0 24px rgba(124, 92, 255, 0.35);
+  --glow-gold: 0 0 32px rgba(255, 210, 74, 0.45);
+
+  /* Movimento */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Cores */
+  --color-*: initial;
+  --color-bg-0: var(--bg-0);
+  --color-bg-1: var(--bg-1);
+  --color-bg-2: var(--bg-2);
+  --color-bg-3: var(--bg-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-text-0: var(--text-0);
+  --color-text-1: var(--text-1);
+  --color-text-2: var(--text-2);
+  --color-volt: var(--volt);
+  --color-volt-dim: var(--volt-dim);
+  --color-plasma: var(--plasma);
+  --color-ion: var(--ion);
+  --color-ember: var(--ember);
+  --color-flare: var(--flare);
+  --color-gold: var(--gold);
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* Tipografia */
+  --font-*: initial;
+  --font-display: var(--font-unbounded), sans-serif;
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Escala: 12 · 14 · 16 · 20 · 24 · 32 · 48 · 64 */
+  --text-*: initial;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 14px;
+  --text-sm--line-height: 20px;
+  --text-base: 16px;
+  --text-base--line-height: 24px;
+  --text-lg: 20px;
+  --text-lg--line-height: 28px;
+  --text-xl: 24px;
+  --text-xl--line-height: 32px;
+  --text-2xl: 32px;
+  --text-2xl--line-height: 40px;
+  --text-3xl: 48px;
+  --text-3xl--line-height: 1.05;
+  --text-4xl: 64px;
+  --text-4xl--line-height: 1;
+
+  /* Espaço base 4px */
+  --spacing: 4px;
+
+  /* Raios: 6 (chips, inputs) · 12 (cards) · 20 (sheets, hero) */
+  --radius-*: initial;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+
+  /* Sombras: só glows (sem sombras pretas) */
+  --shadow-*: initial;
+  --shadow-glow-volt: var(--glow-volt);
+  --shadow-glow-plasma: var(--glow-plasma);
+  --shadow-glow-gold: var(--glow-gold);
+
+  --ease-out: var(--ease-out);
+
+  /* Conteúdo desktop máx. 1280px */
+  --container-content: 1280px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--bg-0);
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100dvh;
+  background: var(--bg-0);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--volt);
+  color: var(--bg-0);
+}
+
+:focus-visible {
+  outline: 1px solid var(--line-strong);
+  outline-offset: 2px;
+}
+
+@layer utilities {
+  /* Números: Geist Mono 500 tabular */
+  .num {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Label de seção estilo instrumento */
+  .label-instrument {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    line-height: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-2);
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
