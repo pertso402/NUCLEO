@@ -12,7 +12,7 @@ create type public.inbox_status as enum ('ok', 'needs_clarification', 'error', '
 -- ------------------------------------------------------------
 -- updated_at
 -- ------------------------------------------------------------
-create or replace function public.set_updated_at()
+create or replace function public.nucleo_set_updated_at()
 returns trigger
 language plpgsql
 set search_path = ''
@@ -104,13 +104,13 @@ create index inbox_messages_user_channel_status_idx
 -- Triggers updated_at
 -- ------------------------------------------------------------
 create trigger settings_updated_at before update on public.settings
-  for each row execute function public.set_updated_at();
+  for each row execute function public.nucleo_set_updated_at();
 create trigger principles_updated_at before update on public.principles
-  for each row execute function public.set_updated_at();
+  for each row execute function public.nucleo_set_updated_at();
 create trigger categories_updated_at before update on public.categories
-  for each row execute function public.set_updated_at();
+  for each row execute function public.nucleo_set_updated_at();
 create trigger inbox_messages_updated_at before update on public.inbox_messages
-  for each row execute function public.set_updated_at();
+  for each row execute function public.nucleo_set_updated_at();
 
 -- ------------------------------------------------------------
 -- RLS: user_id = auth.uid() em select/insert/update/delete
@@ -141,7 +141,7 @@ $$;
 -- Seed por usuário: settings + categorias padrão
 -- (seed não pode depender de auth.uid() numa migration; roda ao criar o usuário)
 -- ------------------------------------------------------------
-create or replace function public.seed_user_defaults(p_user_id uuid)
+create or replace function public.nucleo_seed_user_defaults(p_user_id uuid)
 returns void
 language plpgsql
 security definer
@@ -170,25 +170,26 @@ begin
 end;
 $$;
 
-revoke all on function public.seed_user_defaults(uuid) from public, anon, authenticated;
+revoke all on function public.nucleo_seed_user_defaults(uuid) from public, anon, authenticated;
 
-create or replace function public.handle_new_user()
+create or replace function public.nucleo_handle_new_user()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
 begin
-  perform public.seed_user_defaults(new.id);
+  perform public.nucleo_seed_user_defaults(new.id);
   return new;
 end;
 $$;
 
-revoke all on function public.handle_new_user() from public, anon, authenticated;
+revoke all on function public.nucleo_handle_new_user() from public, anon, authenticated;
 
-create trigger on_auth_user_created
+create trigger nucleo_on_auth_user_created
   after insert on auth.users
-  for each row execute function public.handle_new_user();
+  for each row execute function public.nucleo_handle_new_user();
 
--- Usuários que já existam antes desta migration também recebem o seed.
-select public.seed_user_defaults(u.id) from auth.users u;
+-- Projeto compartilhado com outros sistemas: NÃO semeia todos os auth.users existentes.
+-- Se o usuário do Peter já existir, rodar uma vez:
+--   select public.nucleo_seed_user_defaults(id) from auth.users where email = '<email do Peter>';

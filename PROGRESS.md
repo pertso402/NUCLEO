@@ -102,10 +102,11 @@
 - 2026-11-12 — `proxy.ts` falha fechado: sem variáveis do Supabase responde 503 em tudo menos `/login`. `/api/*` fica fora do matcher (autentica por token).
 - 2026-11-12 — Seed de `settings` + categorias por **trigger em `auth.users`** (`seed_user_defaults`), pois numa migration não existe `auth.uid()`. A migration também semeia usuários já existentes. Funções `security definer` com `search_path = ''` e `execute` revogado de anon/authenticated.
 - 2026-11-12 — PWA com `@serwist/turbopack` (o `@serwist/next` exige webpack; Next 16 builda com Turbopack). SW servido por route handler em `/serwist/sw.js`, desligado em dev. `/api`, `/auth` e Supabase sempre `NetworkOnly`. Ícones gerados por `scripts/generate-icons.mjs` (N geométrico em paths, sem depender de fonte instalada).
+- 2026-11-12 — Banco: projeto Supabase **existente** do Peter (`tarulbqnnbqdrvwsphcw`), compartilhado com outros sistemas (schema `prospector`, `public.leads/conversas/mensagens`). Por isso funções e trigger do NÚCLEO levam prefixo `nucleo_` e a migration não semeia todos os `auth.users`. **Atenção fase 3:** `public.leads` já existe (outro sistema); o pipeline do NÚCLEO vai precisar de outro nome ou schema.
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
-- 2026-11-12 — **0.4/0.5: projeto Supabase não criado.** Custo cotado US$ 0/mês (org CARDAPIOS, sa-east-1), mas o conector exige confirmação explícita do Peter e ela ainda não veio. Obs.: plano free permite 2 projetos ativos (ERP-CHAPELAO e CARDAPIOS-CLIENTES já ativos). Código de 0.4 e migration de 0.5 prontos; falta criar o projeto, aplicar a migration, preencher `.env.local`, criar o usuário do Peter e trocar o template de e-mail do OTP para mostrar `{{ .Token }}`.
+- 2026-11-12 — **0.4/0.5:** projeto definido (`tarulbqnnbqdrvwsphcw`), mas o conector não tem acesso a ele e a connection string não chegou ao `.env.local`. Peter roda o SQL pelo SQL Editor. Aguardando: resultado de `supabase/verificacao.sql` → aprovação da lista de exclusão → aplicar migration → criar usuário + template OTP com `{{ .Token }}`.
 - 2026-11-12 — **0.8: deploy na Vercel não feito.** Depende do Supabase (sem as variáveis o app responde 503 em tudo menos `/login`) e de OK do Peter para publicar. Também falta remoto no GitHub para o CI (`.github/workflows/ci.yml` já pronto) rodar.
 
 ## Configuração pendente com o Peter
