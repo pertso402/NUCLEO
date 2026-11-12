@@ -101,6 +101,7 @@
 - 2026-11-12 — Login por **código de 6 dígitos** (OTP por e-mail, `verifyOtp`) em vez de magic link: o link abriria no Safari e não na PWA instalada. `shouldCreateUser: false` — só o usuário do Peter, criado uma vez no painel.
 - 2026-11-12 — `proxy.ts` falha fechado: sem variáveis do Supabase responde 503 em tudo menos `/login`. `/api/*` fica fora do matcher (autentica por token).
 - 2026-11-12 — Seed de `settings` + categorias por **trigger em `auth.users`** (`seed_user_defaults`), pois numa migration não existe `auth.uid()`. A migration também semeia usuários já existentes. Funções `security definer` com `search_path = ''` e `execute` revogado de anon/authenticated.
+- 2026-11-12 — PWA com `@serwist/turbopack` (o `@serwist/next` exige webpack; Next 16 builda com Turbopack). SW servido por route handler em `/serwist/sw.js`, desligado em dev. `/api`, `/auth` e Supabase sempre `NetworkOnly`. Ícones gerados por `scripts/generate-icons.mjs` (N geométrico em paths, sem depender de fonte instalada).
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
@@ -123,3 +124,4 @@
 | 2026-11-12 | 0.4 (parcial) | Clients `lib/supabase/{client,server,admin}.ts` (`admin` com `server-only`), `proxy.ts` com refresh de sessão e proteção de `(app)`, login OTP em 2 passos, `/auth/signout`, `.env.example`. Aguardando criação do projeto Supabase (ver Bloqueios). |
 | 2026-11-12 | 0.5 (parcial) | `supabase/migrations/20261112190000_init.sql`: enums, `settings`, `principles`, `categories`, `inbox_messages`, trigger `updated_at`, RLS (4 políticas por tabela), seed por usuário. Validado em PGlite com `auth` simulado. Falta aplicar no projeto real (ver Bloqueios). |
 | 2026-11-12 | 0.6 | `lib/money.ts` (centavos inteiros, `parseBRL` pt-BR sem float, `formatBRL`, `brlParts`), `lib/dates.ts` (datas ISO de calendário, hoje/hora/meia-noite em SP, mês, semana seg–dom), `lib/metrics/business-days.ts` (workdays + feriados opcionais). 48 testes com TZ=UTC cobrindo virada de dia/mês/ano em SP, 29/02 e fim de semana. |
+| 2026-11-12 | 0.7 (parcial) | `app/manifest.ts` (standalone, #05060A), ícones 180/192/512 + maskable + SVG, splash 1125×2436 (iPhone 11 Pro), meta iOS `black-translucent`, Serwist (`app/sw.ts` + `SerwistProvider`). Build ok; manifest/SW servidos com 200 no `next start`. O navegador embutido não registra SW nenhum (nem um trivial), então o teste real fica para o iPhone com HTTPS, após o deploy (0.8). |
