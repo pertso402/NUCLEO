@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 0
-**Próxima tarefa:** 0.4
+**Próxima tarefa:** 0.4 (bloqueada) · 0.7
 
 ---
 
@@ -14,7 +14,7 @@
 - [x] 0.3 Componentes base: `Button`, `HudCard`, `StatTile`, `Chip`, `GridBackground`, `TabBar`, sidebar desktop
 - [ ] 0.4 Projeto Supabase + clients (server/client/admin) + Auth por e-mail OTP + middleware protegendo `(app)`
 - [ ] 0.5 Migration inicial: `settings`, `principles`, `categories` (com seed), `inbox_messages` + RLS + trigger `updated_at`
-- [ ] 0.6 `lib/money.ts` e `lib/dates.ts` (fuso SP) + `business-days.ts` com testes
+- [x] 0.6 `lib/money.ts` e `lib/dates.ts` (fuso SP) + `business-days.ts` com testes
 - [ ] 0.7 PWA: manifest, ícones, Serwist, splash; testar "Adicionar à Tela de Início" no iPhone
 - [ ] 0.8 Deploy na Vercel com variáveis de ambiente; CI rodando typecheck + lint + test
 
@@ -122,3 +122,4 @@
 | 2026-11-12 | 0.3 | Button, HudCard (variant target), StatTile, Chip, GridBackground, TabBar (mobile), Sidebar (desktop ≥ lg), PageHeader/EmptyState; layout `(app)` + página "Mais" no mobile; Comando vazio já com a identidade. Verificado em 375×812 e 1366×800. |
 | 2026-11-12 | 0.4 (parcial) | Clients `lib/supabase/{client,server,admin}.ts` (`admin` com `server-only`), `proxy.ts` com refresh de sessão e proteção de `(app)`, login OTP em 2 passos, `/auth/signout`, `.env.example`. Aguardando criação do projeto Supabase (ver Bloqueios). |
 | 2026-11-12 | 0.5 (parcial) | `supabase/migrations/20261112190000_init.sql`: enums, `settings`, `principles`, `categories`, `inbox_messages`, trigger `updated_at`, RLS (4 políticas por tabela), seed por usuário. Validado em PGlite com `auth` simulado. Falta aplicar no projeto real (ver Bloqueios). |
+| 2026-11-12 | 0.6 | `lib/money.ts` (centavos inteiros, `parseBRL` pt-BR sem float, `formatBRL`, `brlParts`), `lib/dates.ts` (datas ISO de calendário, hoje/hora/meia-noite em SP, mês, semana seg–dom), `lib/metrics/business-days.ts` (workdays + feriados opcionais). 48 testes com TZ=UTC cobrindo virada de dia/mês/ano em SP, 29/02 e fim de semana. |
