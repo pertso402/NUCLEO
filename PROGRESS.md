@@ -98,10 +98,12 @@
 - 2026-11-12 — Raiz do repositório = pasta `JARVIS` (equivale a `nucleo/` do ARCHITECTURE §3); docs renomeados de `CLAUDE (1).md`/`ARCHITECTURE (1).md` para os nomes canônicos.
 - 2026-11-12 — Next.js 16.4 (template atual): `middleware.ts` passa a se chamar `proxy.ts`; Tailwind v4 configurado via CSS (`@theme` em `globals.css`), sem `tailwind.config.ts`.
 - 2026-11-12 — `cacheComponents`/`partialPrefetching` desligados: app é 100% autenticado e dinâmico (single-user), o modelo de Suspense obrigatório só adicionaria complexidade.
+- 2026-11-12 — Login por **código de 6 dígitos** (OTP por e-mail, `verifyOtp`) em vez de magic link: o link abriria no Safari e não na PWA instalada. `shouldCreateUser: false` — só o usuário do Peter, criado uma vez no painel.
+- 2026-11-12 — `proxy.ts` falha fechado: sem variáveis do Supabase responde 503 em tudo menos `/login`. `/api/*` fica fora do matcher (autentica por token).
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
-_(nenhum)_
+- 2026-11-12 — **0.4/0.5: projeto Supabase não criado.** Custo cotado US$ 0/mês (org CARDAPIOS, sa-east-1), mas o conector exige confirmação explícita do Peter e ela ainda não veio. Obs.: plano free permite 2 projetos ativos (ERP-CHAPELAO e CARDAPIOS-CLIENTES já ativos). Código de 0.4 e migration de 0.5 prontos; falta criar o projeto, aplicar a migration, preencher `.env.local`, criar o usuário do Peter e trocar o template de e-mail do OTP para mostrar `{{ .Token }}`.
 
 ## Configuração pendente com o Peter
 - [ ] Marco inicial (título, métrica, valor alvo)
@@ -117,3 +119,4 @@ _(nenhum)_
 | 2026-11-12 | 0.1 | Next.js 16 + TS strict + ESLint + Tailwind 4; estrutura de pastas do §3 com páginas placeholder; scripts typecheck/lint/test; git init. |
 | 2026-11-12 | 0.2 | Unbounded (next/font/google) + Geist/Geist Mono (pacote geist); tokens Obsidiana Volt em `:root` e mapeados no `@theme` do Tailwind 4 (paleta, escala tipográfica, raios, glows; cores/sombras padrão do Tailwind removidas para impedir valores fora do DS); utilitários `.num` e `.label-instrument`. |
 | 2026-11-12 | 0.3 | Button, HudCard (variant target), StatTile, Chip, GridBackground, TabBar (mobile), Sidebar (desktop ≥ lg), PageHeader/EmptyState; layout `(app)` + página "Mais" no mobile; Comando vazio já com a identidade. Verificado em 375×812 e 1366×800. |
+| 2026-11-12 | 0.4 (parcial) | Clients `lib/supabase/{client,server,admin}.ts` (`admin` com `server-only`), `proxy.ts` com refresh de sessão e proteção de `(app)`, login OTP em 2 passos, `/auth/signout`, `.env.example`. Aguardando criação do projeto Supabase (ver Bloqueios). |
