@@ -115,7 +115,7 @@ html {
 
 body {
   min-height: 100dvh;
-  background: var(--bg-0);
+  /* sem background: o fundo vem do html, para a GridBackground (z negativo) aparecer */
   color: var(--text-1);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;

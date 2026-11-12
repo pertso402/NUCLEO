@@ -1,3 +1,11 @@
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+
 export default function Page() {
-  return <h1>Marcos</h1>;
+  return (
+    <>
+      <PageHeader title="Marcos" />
+      <EmptyState text="Marcos de receita chegam na Fase 1." />
+    </>
+  );
 }
