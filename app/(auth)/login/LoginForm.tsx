@@ -7,6 +7,17 @@ import { createClient } from "@/lib/supabase/client";
 
 type Step = "email" | "code";
 
+/** Traduz o erro do Supabase Auth para algo acionável. */
+function sendErrorMessage(error: { status?: number; code?: string }): string {
+  if (error.status === 429 || error.code === "over_email_send_rate_limit") {
+    return "Limite de e-mails atingido. Espere alguns minutos e tente de novo.";
+  }
+  if (error.code === "otp_disabled" || error.code === "signup_disabled" || error.status === 422) {
+    return "Este e-mail não tem acesso ao NÚCLEO.";
+  }
+  return "Não foi possível enviar o código. Tente de novo.";
+}
+
 const inputClass =
   "h-11 w-full rounded-sm border border-line bg-bg-3 px-3 text-text-0 placeholder:text-text-2 focus:border-line-strong focus:outline-none";
 
@@ -28,7 +39,7 @@ export function LoginForm() {
     });
     setBusy(false);
     if (error) {
-      setError("Não foi possível enviar o código. Confere o e-mail.");
+      setError(sendErrorMessage(error));
       return;
     }
     setStep("code");
