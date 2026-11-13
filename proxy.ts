@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth"];
+const PUBLIC_PATHS = ["/login", "/auth", ...(process.env.NODE_ENV === "production" ? [] : ["/dev"])];
 
 /**
  * Atualiza a sessão do Supabase em toda navegação e protege o grupo `(app)`.
