@@ -17,6 +17,12 @@ describe("parseBRL", () => {
     ["-40", -4000],
     ["0,005", 1], // meio centavo arredonda para cima
     ["0,004", 0],
+    ["99 reais", 9900],
+    ["1 real", 100],
+    ["60 conto", 6000],
+    ["50 pilas", 5000],
+    ["2 mil reais", 200000],
+    ["R$ 38,90 reais", 3890],
   ])("%s → %i centavos", (input, expected) => {
     expect(parseBRL(input)).toBe(expected);
   });

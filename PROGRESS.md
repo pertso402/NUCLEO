@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 1
-**Próxima tarefa:** 1.4
+**Próxima tarefa:** 1.6
 
 ---
 
@@ -26,7 +26,7 @@
 - [x] 1.1 Migrations: `transactions`, `milestones` + views `v_month_totals`, `v_category_breakdown`
 - [x] 1.2 `lib/metrics/pace.ts` (ARCHITECTURE §6.1) com testes de borda
 - [x] 1.3 `/api/ingest`: auth por token, parser OpenAI com `add_transaction`, `query`, `undo_last`, `ask_clarification`; log em `inbox_messages`
-- [ ] 1.4 Fixtures de parser (mín. 15 frases de dinheiro) + teste
+- [x] 1.4 Fixtures de parser (mín. 15 frases de dinheiro) + teste
 - [x] 1.5 Tela **Comando** v1: anel do marco, ticker, faltam R$ X, barra de ritmo, projeção (Realtime atualiza ao lançar)
 - [ ] 1.6 `CaptureButton` (texto) + `CommandPalette` (Ctrl/Cmd+K) usando `/api/ingest`
 - [ ] 1.7 Tela **Dinheiro**: extrato, filtros (mês/categoria), edição inline, relatórios do mês e 12 meses
@@ -110,6 +110,7 @@
 - 2026-11-13 — Vitrine `/dev/comando` (só em `next dev`, 404 em produção, sem login) mostra o hero nos estados zero/abaixo/no ritmo/batido com dados fictícios — o login real não pode ser automatizado (senha do Peter). O anel não anima o arco (DESIGN: animar só transform/opacity); quem anima é o número (ticker).
 - 2026-11-13 — **OpenAI no lugar da Claude API** para parsing e briefings (escolha do Peter). Modelos configuráveis por variável (`OPENAI_MODEL`, `OPENAI_MODEL_FALLBACK`, `OPENAI_MODEL_BRIEFING`) para trocar sem mexer no código. CLAUDE.md, ARCHITECTURE §2/§5.2/§8/§11 atualizados.
 - 2026-11-13 — Ingest: modelo `gpt-5.4-mini` (fallback `gpt-5.5`) via Chat Completions com function calling `strict`; `reasoning_effort` não é aceito com ferramentas nesse modelo, fica no padrão. Valor chega como texto e o servidor converte com `parseBRL` (sem float). Dono resolvido pela única linha de `settings` (projeto compartilhado). `/api/ingest` aceita `x-nucleo-token` (n8n/Siri) **ou** a sessão do dono (botão de captura e palette, Fase 1.6). Rate limit em memória por instância (freio, não garantia).
+- 2026-11-13 — Bateria do parser (`npm run test:parser`, config `vitest.parser.config.ts`) roda contra a OpenAI real e fica **fora do CI** (precisa de chave e gasta API). Rodar sempre que mudar prompt, modelo ou categorias. Data fixa nas fixtures (13/11/2026 12h SP) para "ontem" ser determinístico.
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
@@ -147,3 +148,4 @@ _(nenhum)_
 | 2026-11-13 | 1.5 ✓ (validada) | Peter abriu o app publicado e o Comando mostrou o marco de R$ 10k com os dados reais. |
 | 2026-11-13 | 1.3 ✓ | `/api/ingest` + `lib/ingest/{tools,parser,executor,run}.ts`: token em tempo constante, rate limit 30/min, inbox registrado antes de processar, `add_transaction` (categoria por nome sem acento, fallback Outros/Outras receitas, data relativa), `query` (marco, resumo do mês, total por categoria — números do SQL), `undo_last` (reverte a última captura e marca `undone`), `ask_clarification` (próxima mensagem do canal em 10 min vira resposta). Resposta no formato §5.2 com o marco a cada receita. Teste de ponta a ponta no banco real: 401 sem token, receita/2 despesas/consulta/desfaz×2/esclarecimento → todos certos, 2–6 s por frase; registros de teste apagados. 10 testes unitários novos (77 no total). |
 | 2026-11-13 | 1.3 (produção) | `/api/ingest` publicado: 401 sem token; consulta do marco com token respondeu em 4,5 s com os números certos (registro de teste apagado). |
+| 2026-11-13 | 1.4 ✓ | `tests/fixtures/ingest.json`: 24 frases (18 de dinheiro, incluindo 2 lançamentos numa frase, "ontem", "2,5 mil", "1,5k", "60 conto", "1.200"; + desfaz ×2, 3 consultas, 1 dúvida). Primeira rodada 22/24 (categoria de internet e farmácia) → dicas de categoria no prompt. A bateria achou um bug real: o modelo manda "99 reais" e o `parseBRL` não aceitava a palavra — corrigido (reais/real/conto/pila) com 6 testes novos. Depois: 24/24 em duas rodadas seguidas. 83 testes unitários. |

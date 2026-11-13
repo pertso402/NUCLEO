@@ -36,7 +36,13 @@ export function toCents(value: string | number | bigint | null | undefined): Cen
  * Retorna null se não houver número reconhecível.
  */
 export function parseBRL(input: string): Cents | null {
-  let s = input.toLowerCase().replace(/r\$/g, "").replace(/\s+/g, " ").trim();
+  let s = input
+    .toLowerCase()
+    .replace(/r\$/g, "")
+    // unidades faladas: "99 reais", "1 real", "60 conto(s)", "50 pila(s)", "10 mangos"
+    .replace(/\b(reais|real|contos?|pilas?|mangos?)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!s) return null;
 
   let multiplier = 1;

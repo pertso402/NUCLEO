@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "test:parser": "vitest run -c vitest.parser.config.ts"
   },
   "dependencies": {
     "@serwist/turbopack": "^9.5.13",
