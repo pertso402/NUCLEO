@@ -13,12 +13,12 @@ export function Money({
 }: {
   cents: Cents;
   showCents?: boolean;
-  /** Cor do número: default (`--text-0`), volt (no ritmo/receita), ember (atenção). */
-  tone?: "default" | "volt" | "ember";
+  /** Cor do número: default (`--text-0`), volt (no ritmo/receita), ember (atenção), flare (despesa). */
+  tone?: "default" | "volt" | "ember" | "flare";
   className?: string;
 }) {
   const p = brlParts(cents);
-  const toneClass = tone === "volt" ? "text-volt" : tone === "ember" ? "text-ember" : "text-text-0";
+  const toneClass = { default: "text-text-0", volt: "text-volt", ember: "text-ember", flare: "text-flare" }[tone];
   return (
     <span className={cn("num whitespace-nowrap", className)}>
       <span className="mr-[0.15em] align-baseline text-[0.5em] text-text-1">

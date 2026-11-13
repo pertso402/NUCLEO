@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 1
-**Próxima tarefa:** 1.7
+**Próxima tarefa:** 1.8
 
 ---
 
@@ -29,7 +29,7 @@
 - [x] 1.4 Fixtures de parser (mín. 15 frases de dinheiro) + teste
 - [x] 1.5 Tela **Comando** v1: anel do marco, ticker, faltam R$ X, barra de ritmo, projeção (Realtime atualiza ao lançar)
 - [x] 1.6 `CaptureButton` (texto) + `CommandPalette` (Ctrl/Cmd+K) usando `/api/ingest`
-- [ ] 1.7 Tela **Dinheiro**: extrato, filtros (mês/categoria), edição inline, relatórios do mês e 12 meses
+- [x] 1.7 Tela **Dinheiro**: extrato, filtros (mês/categoria), edição inline, relatórios do mês e 12 meses
 - [ ] 1.8 Tela **Marcos**: criar/ordenar marcos, linha do tempo de conquistas, celebração ao bater
 - [ ] 1.9 Workflow n8n: Evolution → filtro de número → (áudio → ElevenLabs STT) → `/api/ingest` → resposta no WhatsApp. Exportar JSON para `integrations/n8n/`
 - [ ] 1.10 Resposta de receita sempre com o novo estado do marco (ARCHITECTURE §5.2)
@@ -112,6 +112,7 @@
 - 2026-11-13 — Ingest: modelo `gpt-5.4-mini` (fallback `gpt-5.5`) via Chat Completions com function calling `strict`; `reasoning_effort` não é aceito com ferramentas nesse modelo, fica no padrão. Valor chega como texto e o servidor converte com `parseBRL` (sem float). Dono resolvido pela única linha de `settings` (projeto compartilhado). `/api/ingest` aceita `x-nucleo-token` (n8n/Siri) **ou** a sessão do dono (botão de captura e palette, Fase 1.6). Rate limit em memória por instância (freio, não garantia).
 - 2026-11-13 — Bateria do parser (`npm run test:parser`, config `vitest.parser.config.ts`) roda contra a OpenAI real e fica **fora do CI** (precisa de chave e gasta API). Rodar sempre que mudar prompt, modelo ou categorias. Data fixa nas fixtures (13/11/2026 12h SP) para "ontem" ser determinístico.
 - 2026-11-13 — Captura no app sem emoji (DESIGN §7): a resposta do ingest continua com emoji para o WhatsApp e `lib/ingest/reply-lines.ts` converte cada linha em tipo → ícone Lucide; a dica "desfaz" vira botão **Desfazer**. Botão flutuante só no mobile (no desktop é Ctrl/⌘+K e o botão "Lançar" na sidebar). Gravação de áudio no botão continua na 2.10.
+- 2026-11-13 — Tela Dinheiro: filtros (mês, tipo, categoria) vivem na URL (`?mes=2026-11&tipo=expense&cat=<id>`), então dá pra voltar/compartilhar o estado. Totais e relatórios usam só `confirmed` (mesma regra das views); o extrato mostra também `pending_review` com chip "revisar" e botão Confirmar por linha (a revisão em lote continua na 4.4). Edição/exclusão por server actions com a sessão do dono (RLS), valor como texto pt-BR → `parseBRL`; excluir pede confirmação em 2 toques. Receita acumulada é **dia a dia no mês**, com a meta do marco `revenue_month` do mês como linha tracejada. Categorias em barras horizontais simples (sem Recharts) que filtram o extrato ao tocar. Recharts 3.
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
@@ -151,3 +152,4 @@ _(nenhum)_
 | 2026-11-13 | 1.3 (produção) | `/api/ingest` publicado: 401 sem token; consulta do marco com token respondeu em 4,5 s com os números certos (registro de teste apagado). |
 | 2026-11-13 | 1.4 ✓ | `tests/fixtures/ingest.json`: 24 frases (18 de dinheiro, incluindo 2 lançamentos numa frase, "ontem", "2,5 mil", "1,5k", "60 conto", "1.200"; + desfaz ×2, 3 consultas, 1 dúvida). Primeira rodada 22/24 (categoria de internet e farmácia) → dicas de categoria no prompt. A bateria achou um bug real: o modelo manda "99 reais" e o `parseBRL` não aceitava a palavra — corrigido (reais/real/conto/pila) com 6 testes novos. Depois: 24/24 em duas rodadas seguidas. 83 testes unitários. |
 | 2026-11-13 | 1.6 ✓ | `CaptureProvider` (estado, Ctrl/⌘+K, envio para `/api/ingest` com a sessão, `router.refresh()`), `CommandPalette` (folha de baixo no mobile, central no desktop, histórico da sessão, "Processando…", Desfazer, Esc, foco automático, input 16px pra não dar zoom no iOS), `CaptureButton` 56px acima da tab bar, botão "Lançar" na sidebar, `ReplyView` + `reply-lines` (4 testes). Vitrine `/dev/captura`. Verificado 375×812 e 1366×900; sessão real autentica (200) e sem cookie dá 401 — uma despesa de teste de R$ 1 criada sem querer nessa checagem foi apagada. 87 testes. |
+| 2026-11-13 | 1.7 ✓ | Tela Dinheiro: resumo receita/despesa/saldo, receita acumulada (área Volt + meta tracejada), extrato por dia com ícone da origem, filtros tipo/categoria, edição inline (tipo, valor, data, categoria, descrição, cliente/loja), confirmar pendente, excluir com confirmação; categorias por tipo; 12 meses em barras (Volt × Flare). `lib/metrics/money-report.ts` + `addMonths`/`parseMonthKey`/rótulos de mês + `centsToInput`/`formatCompactBRL` (12 testes novos, 99 no total). `DinheiroView` separado da página para a vitrine `/dev/dinheiro` (dados fictícios). Verificado 375×812 (sem rolagem horizontal) e desktop; página real abre com os dados do banco (vazio, meta R$ 10k). Nenhuma edição real feita na checagem. |

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brlParts, formatBRL, parseBRL, ratio, reaisToCents, sumCents, toCents } from "@/lib/money";
+import { brlParts, centsToInput, formatBRL, formatCompactBRL, parseBRL, ratio, reaisToCents, sumCents, toCents } from "@/lib/money";
 
 describe("parseBRL", () => {
   it.each([
@@ -72,5 +72,24 @@ describe("conversões", () => {
   it("ratio protege meta zero", () => {
     expect(ratio(620000, 1000000)).toBeCloseTo(0.62);
     expect(ratio(100, 0)).toBe(0);
+  });
+});
+
+describe("centsToInput / formatCompactBRL", () => {
+  it("centsToInput é o inverso de parseBRL", () => {
+    for (const c of [1, 99, 100, 4090, 150000, 123456789]) {
+      expect(parseBRL(centsToInput(c))).toBe(c);
+    }
+    expect(centsToInput(150000)).toBe("1500,00");
+    expect(centsToInput(5)).toBe("0,05");
+  });
+  it("formatCompactBRL", () => {
+    expect(formatCompactBRL(0)).toBe("R$ 0");
+    expect(formatCompactBRL(95000)).toBe("R$ 950");
+    expect(formatCompactBRL(150000)).toBe("R$ 1,5k");
+    expect(formatCompactBRL(1000000)).toBe("R$ 10k");
+    expect(formatCompactBRL(1234000)).toBe("R$ 12k");
+    expect(formatCompactBRL(120000000)).toBe("R$ 1,2M");
+    expect(formatCompactBRL(-200000)).toBe("-R$ 2k");
   });
 });

@@ -136,3 +136,25 @@ export function ratio(current: Cents, target: Cents): number {
   if (target <= 0) return 0;
   return current / target;
 }
+
+/** Centavos → texto editável pt-BR sem milhar ("150000" → "1500,00"). Inverso de `parseBRL`. */
+export function centsToInput(cents: Cents): string {
+  assertCents(cents);
+  const abs = Math.abs(cents);
+  return `${cents < 0 ? "-" : ""}${Math.floor(abs / 100)},${String(abs % 100).padStart(2, "0")}`;
+}
+
+/** Rótulo curto para eixo de gráfico: "R$ 950", "R$ 1,5k", "R$ 12k", "R$ 1,2M". */
+export function formatCompactBRL(cents: Cents): string {
+  assertCents(cents);
+  const sign = cents < 0 ? "-" : "";
+  const reais = Math.round(Math.abs(cents) / 100);
+  const one = (n: number, unit: string) => {
+    const tenths = Math.round(n * 10) / 10;
+    const s = Number.isInteger(tenths) || tenths >= 10 ? String(Math.round(tenths)) : String(tenths).replace(".", ",");
+    return `${sign}R$ ${s}${unit}`;
+  };
+  if (reais >= 1_000_000) return one(reais / 1_000_000, "M");
+  if (reais >= 1_000) return one(reais / 1_000, "k");
+  return `${sign}R$ ${reais}`;
+}

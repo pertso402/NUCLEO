@@ -162,3 +162,29 @@ export function formatShortDate(iso: ISODate): string {
 export function formatLongDate(iso: ISODate): string {
   return longFmt.format(isoToUTC(iso));
 }
+
+/** Primeiro dia do mês deslocado em `n` meses ("2026-11-13", -1 → "2026-10-01"). */
+export function addMonths(iso: ISODate, n: number): ISODate {
+  const { year, month } = parseISODate(iso);
+  const total = year * 12 + (month - 1) + n;
+  return toISODate(Math.floor(total / 12), (total % 12) + 1, 1);
+}
+
+/** Lê "2026-11" (de URL) e devolve o 1º dia do mês, ou null se inválido. */
+export function parseMonthKey(key: string | null | undefined): ISODate | null {
+  if (!key || !/^\d{4}-(0[1-9]|1[0-2])$/.test(key)) return null;
+  return `${key}-01`;
+}
+
+const monthLongFmt = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC", month: "long", year: "numeric" });
+const monthShortFmt = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC", month: "short" });
+
+/** "novembro de 2026" */
+export function formatMonthLong(iso: ISODate): string {
+  return monthLongFmt.format(isoToUTC(iso));
+}
+
+/** "nov" */
+export function formatMonthShort(iso: ISODate): string {
+  return monthShortFmt.format(isoToUTC(iso)).replace(".", "");
+}
