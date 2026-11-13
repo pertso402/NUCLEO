@@ -25,7 +25,7 @@
 ## Fase 1 — Dinheiro + Marcos + Captura (o MVP que precisa ser usado todo dia)
 - [x] 1.1 Migrations: `transactions`, `milestones` + views `v_month_totals`, `v_category_breakdown`
 - [x] 1.2 `lib/metrics/pace.ts` (ARCHITECTURE §6.1) com testes de borda
-- [ ] 1.3 `/api/ingest`: auth por token, parser Claude com `add_transaction`, `query`, `undo_last`, `ask_clarification`; log em `inbox_messages`
+- [ ] 1.3 `/api/ingest`: auth por token, parser OpenAI com `add_transaction`, `query`, `undo_last`, `ask_clarification`; log em `inbox_messages`
 - [ ] 1.4 Fixtures de parser (mín. 15 frases de dinheiro) + teste
 - [x] 1.5 Tela **Comando** v1: anel do marco, ticker, faltam R$ X, barra de ritmo, projeção (Realtime atualiza ao lançar)
 - [ ] 1.6 `CaptureButton` (texto) + `CommandPalette` (Ctrl/Cmd+K) usando `/api/ingest`
@@ -44,7 +44,7 @@
 - [ ] 2.3 Tela **Rotina** (abas Tarefas · Hábitos com heatmap · Tempo)
 - [ ] 2.4 Tela **Objetivos** (trimestre, área, porquê, métrica, tarefas vinculadas)
 - [ ] 2.5 `lib/metrics/score.ts` + faixa "Hoje" e top 3 tarefas no Comando + princípio do dia
-- [ ] 2.6 Endpoints `/api/cron/briefing-manha` e `/api/cron/fechamento-dia` (números no servidor, texto pelo Claude) + schedules no n8n
+- [ ] 2.6 Endpoints `/api/cron/briefing-manha` e `/api/cron/fechamento-dia` (números no servidor, texto pela OpenAI) + schedules no n8n
 - [ ] 2.7 Tela **Revisão** (fechamento do dia em 60s + revisão semanal) e `/api/cron/revisao-semanal`
 - [ ] 2.8 `/api/widget` + `integrations/scriptable/nucleo-widget.js`
 - [ ] 2.9 `integrations/siri/README.md` com passo a passo do Atalho "Lançar no Núcleo"
@@ -108,6 +108,7 @@
 - 2026-11-12 — Ritmo (`pace.ts`): `paceNeeded` arredonda para cima e `paceCurrent` para baixo (nunca promete mais do que tem); projeção numa conta só (`current × bdTotal ÷ bdElapsed`) para não acumular arredondamento; mensagens em reais cheios arredondados para cima. Também expõe `expectedPct` (onde deveria estar hoje) para o tick do anel e a barra de ritmo (DESIGN §5).
 - 2026-11-13 — **1.5 adiantada antes de 1.3/1.4** (pedido do Peter). A 1.3 depende de chaves (Anthropic, `service_role`, token) que ainda não foram providenciadas; a 1.5 só lê o banco. O Realtime da 1.5 já fica pronto, então quando a 1.3 entrar o anel sobe sozinho.
 - 2026-11-13 — Vitrine `/dev/comando` (só em `next dev`, 404 em produção, sem login) mostra o hero nos estados zero/abaixo/no ritmo/batido com dados fictícios — o login real não pode ser automatizado (senha do Peter). O anel não anima o arco (DESIGN: animar só transform/opacity); quem anima é o número (ticker).
+- 2026-11-13 — **OpenAI no lugar da Claude API** para parsing e briefings (escolha do Peter). Modelos configuráveis por variável (`OPENAI_MODEL`, `OPENAI_MODEL_FALLBACK`, `OPENAI_MODEL_BRIEFING`) para trocar sem mexer no código. CLAUDE.md, ARCHITECTURE §2/§5.2/§8/§11 atualizados.
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
@@ -142,3 +143,4 @@ _(nenhum)_
 | 2026-11-12 | 1.1 ✓ | Migration `20261112235000_money_milestones.sql`: `transactions` (centavos > 0, source, status, `external_id` único por usuário), `milestones` (métricas sem scope), views `v_month_totals` e `v_category_breakdown` com `security_invoker` (respeitam RLS; só `confirmed`), Realtime ligado nas duas tabelas, marco "R$ 10k de receita" (nov/2026) semeado só para quem tem `settings`. Testada em PGlite (totais, isolamento entre usuários, valor negativo recusado) e aplicada pelo Peter; confirmada via API. `lead_id` sem FK até a Fase 3 (conflito de nome com `public.leads`). |
 | 2026-11-12 | 1.2 ✓ | `lib/metrics/pace.ts` (§6.1): dias úteis decorridos contam hoje só após 12h em SP, `bdLeft` mínimo 1, projeção, `etaDate`, textos "No ritmo"/"Abaixo do ritmo"/"Marco batido", `resolvePeriod` (null = mês corrente). 13 testes: zero no meio do mês, no ritmo, manhã × tarde, batido, meta zero, virada de mês às 23h, primeiro dia, feriado. Total 61 testes. |
 | 2026-11-13 | 1.5 ✓ | Comando v1: `RingProgress` (arco Volt com glow, tick Ember/Volt de "onde deveria estar", Gold só no batido), `StatTicker` (600ms, respeita reduced-motion), `PaceBar`, `Money` (R$ 50%/centavos apagados), `MilestoneHero` (faltam, dias úteis, precisa × ritmo por dia, resumo), `lib/data/comando.ts` (marco ativo de menor `position` + soma dos lançamentos confirmados) e `lib/metrics/milestone-value.ts` (6 testes). `RealtimeRefresh` re-renderiza ao mudar `transactions`/`milestones` e ao voltar o foco. Saudação por hora e data em SP. Verificado em 375×812 e 1366×900 pela vitrine. Total 67 testes. |
+| 2026-11-13 | 1.5 ✓ (validada) | Peter abriu o app publicado e o Comando mostrou o marco de R$ 10k com os dados reais. |

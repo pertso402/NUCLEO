@@ -32,7 +32,7 @@
 ## Stack (não trocar sem registrar decisão)
 Next.js (App Router) + TypeScript strict · Tailwind CSS · Supabase (Postgres, Auth, Realtime) · Vercel ·
 Motion (framer-motion) · Recharts · Zod · TanStack Query · Serwist (PWA/service worker) · Vitest + Playwright ·
-Claude API (parsing e briefings) · ElevenLabs Speech-to-Text (áudio) · Evolution API (WhatsApp) · n8n (ponte e agendamentos).
+OpenAI API (parsing e briefings) · ElevenLabs Speech-to-Text (áudio) · Evolution API (WhatsApp) · n8n (ponte e agendamentos).
 
 Se os conectores de Supabase e Vercel estiverem disponíveis na sessão, use-os para migrations, deploy e logs.
 

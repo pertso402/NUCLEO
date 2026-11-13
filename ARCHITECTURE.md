@@ -47,7 +47,7 @@ Usuário único e **um dinheiro só**: o Peter trabalha como autônomo (serviço
  │  Postgres + RLS + Views       │        └──────────────────┘
  │  Auth (e-mail OTP)            │
  │  Realtime (atualiza a tela)   │        ┌──────────────────┐
- └──────────────────────────────┘        │ Claude API        │◄── parsing + briefings
+ └──────────────────────────────┘        │ OpenAI API        │◄── parsing + briefings
                                           │ ElevenLabs STT    │◄── áudio
                                           │ Pluggy (fase 4)   │◄── Open Finance
                                           └──────────────────┘
@@ -228,8 +228,8 @@ Seed: Receita de cliente, Setup/implantação, Outras receitas · Alimentação,
 
 Payload: `{ channel, text, client_ts }`. Resposta: `{ status, reply_text, actions: [...] , inbox_id }`.
 
-### 5.2 Parser (Claude API com tool use)
-- Modelo de parsing: `claude-haiku-5-5` (rápido e barato). Fallback/retry com `claude-sonnet-5-5` se o JSON vier inválido.
+### 5.2 Parser (OpenAI API com function calling)
+- Modelo de parsing: modelo pequeno e barato da OpenAI, configurável em `OPENAI_MODEL`. Uma nova tentativa com `OPENAI_MODEL_FALLBACK` se a chamada de ferramenta vier inválida.
 - System prompt inclui: data/hora atual em São Paulo, lista de categorias, hábitos ativos, leads vivos (nome + empresa + stage, máx. 50), timer aberto.
 - Uma mensagem pode gerar várias ações ("gastei 40 de gasolina e fiz academia" = 2 ferramentas).
 - Se faltar dado essencial (valor, ou lead ambíguo), usar `ask_clarification` → status `needs_clarification`, e a próxima mensagem do mesmo canal em até 10 min é tratada como resposta.
@@ -358,7 +358,7 @@ Desktop: sidebar fixa à esquerda + Ctrl/Cmd+K (command palette que também lan�
 | dias úteis 13:30 | `followups` | se houver follow-up pendente do dia: lembrete com lista |
 | dia 1 do mês 08:00 | `briefing-manha?monthly=1` | fechamento do mês anterior + marco do novo mês |
 
-Textos dos briefings gerados pelo `claude-sonnet-5-5` a partir de um JSON de números calculado no servidor (o modelo só redige; nunca inventa número). Tom: direto, motivador sem ser meloso, em PT-BR informal.
+Textos dos briefings gerados pela OpenAI (`OPENAI_MODEL_BRIEFING`) a partir de um JSON de números calculado no servidor (o modelo só redige; nunca inventa número). Tom: direto, motivador sem ser meloso, em PT-BR informal.
 
 Push (Web Push/VAPID) espelha os briefings quando a PWA estiver instalada; WhatsApp é o canal principal.
 
@@ -388,7 +388,10 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 NUCLEO_API_TOKEN=
-ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
+OPENAI_MODEL=                 # parser (rápido e barato)
+OPENAI_MODEL_FALLBACK=        # retry quando a chamada vier inválida
+OPENAI_MODEL_BRIEFING=        # textos dos briefings
 ELEVENLABS_API_KEY=
 EVOLUTION_API_URL=
 EVOLUTION_API_KEY=
