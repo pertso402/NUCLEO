@@ -1,10 +1,12 @@
+import { CaptureButton } from "@/components/capture/CaptureButton";
+import { CaptureProvider } from "@/components/capture/CaptureProvider";
 import { GridBackground } from "@/components/hud/GridBackground";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { TabBar } from "@/components/ui/TabBar";
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
-    <>
+    <CaptureProvider>
       <GridBackground />
       <Sidebar />
       <div className="pt-safe lg:pl-60">
@@ -12,7 +14,8 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
       </div>
+      <CaptureButton />
       <TabBar />
-    </>
+    </CaptureProvider>
   );
 }

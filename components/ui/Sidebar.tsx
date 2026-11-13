@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
+import { Plus } from "lucide-react";
+import { useCapture } from "@/components/capture/CaptureProvider";
 import { NAV_ALL, isActive } from "./nav";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { open } = useCapture();
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-line bg-bg-1 lg:flex">
       <div className="flex h-16 items-center gap-2 px-6">
@@ -41,8 +44,16 @@ export function Sidebar() {
           })}
         </ul>
       </nav>
-      <div className="px-6 py-4">
-        <span className="num text-xs text-text-2">Ctrl/⌘ K</span>
+      <div className="p-3">
+        <button
+          type="button"
+          onClick={() => open("palette")}
+          className="flex h-10 w-full items-center gap-3 rounded-sm border border-line px-3 text-sm text-text-1 transition-colors duration-150 hover:border-line-strong hover:text-text-0"
+        >
+          <Plus size={20} strokeWidth={1.5} className="text-volt" />
+          <span className="flex-1 text-left">Lançar</span>
+          <kbd className="num text-xs text-text-2">Ctrl/⌘ K</kbd>
+        </button>
       </div>
     </aside>
   );
