@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 1
-**Próxima tarefa:** 1.2
+**Próxima tarefa:** 1.3
 
 ---
 
@@ -24,7 +24,7 @@
 
 ## Fase 1 — Dinheiro + Marcos + Captura (o MVP que precisa ser usado todo dia)
 - [x] 1.1 Migrations: `transactions`, `milestones` + views `v_month_totals`, `v_category_breakdown`
-- [ ] 1.2 `lib/metrics/pace.ts` (ARCHITECTURE §6.1) com testes de borda
+- [x] 1.2 `lib/metrics/pace.ts` (ARCHITECTURE §6.1) com testes de borda
 - [ ] 1.3 `/api/ingest`: auth por token, parser Claude com `add_transaction`, `query`, `undo_last`, `ask_clarification`; log em `inbox_messages`
 - [ ] 1.4 Fixtures de parser (mín. 15 frases de dinheiro) + teste
 - [ ] 1.5 Tela **Comando** v1: anel do marco, ticker, faltam R$ X, barra de ritmo, projeção (Realtime atualiza ao lançar)
@@ -105,6 +105,7 @@
 - 2026-11-12 — Banco: projeto Supabase **existente** do Peter (`tarulbqnnbqdrvwsphcw`), compartilhado com outros sistemas (schema `prospector`, `public.leads/conversas/mensagens`). Por isso funções e trigger do NÚCLEO levam prefixo `nucleo_` e a migration não semeia todos os `auth.users`. **Atenção fase 3:** `public.leads` já existe (outro sistema); o pipeline do NÚCLEO vai precisar de outro nome ou schema.
 - 2026-11-12 — Vercel: projeto `nucleo` (conta pertso402), produção em https://nucleo-beta.vercel.app. `vercel.json` fixa framework Next.js (o projeto criado pelo CLI veio como "Other" e só publicava `public/`) e região `gru1` (São Paulo, perto do Supabase sa-east). Node fixado em 24.x via `engines`. Variáveis em produção: URL e chave publicável do Supabase + `NUCLEO_OWNER_EMAIL`.
 - 2026-11-12 — Código em repositório privado https://github.com/pertso402/NUCLEO (branch `main`). CI do GitHub Actions roda em todo push, e a Vercel está conectada ao repositório: **todo push na `main` publica em produção** automaticamente.
+- 2026-11-12 — Ritmo (`pace.ts`): `paceNeeded` arredonda para cima e `paceCurrent` para baixo (nunca promete mais do que tem); projeção numa conta só (`current × bdTotal ÷ bdElapsed`) para não acumular arredondamento; mensagens em reais cheios arredondados para cima. Também expõe `expectedPct` (onde deveria estar hoje) para o tick do anel e a barra de ritmo (DESIGN §5).
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
@@ -137,3 +138,4 @@ _(nenhum)_
 | 2026-11-12 | pré-1.1 | Removida a separação arte/pessoal de tudo (código, banco via nova migration, ARCHITECTURE, DESIGN, PROGRESS); SQLs de limpeza já usados removidos do repo. Marco inicial definido: R$ 10k de receita em nov/2026. Vercel conectada ao GitHub. |
 | 2026-11-12 | pré-1.1 ✓ | Migration `remove_scope` aplicada pelo Peter; confirmado via API (`categories.scope_default` não existe mais). |
 | 2026-11-12 | 1.1 ✓ | Migration `20261112235000_money_milestones.sql`: `transactions` (centavos > 0, source, status, `external_id` único por usuário), `milestones` (métricas sem scope), views `v_month_totals` e `v_category_breakdown` com `security_invoker` (respeitam RLS; só `confirmed`), Realtime ligado nas duas tabelas, marco "R$ 10k de receita" (nov/2026) semeado só para quem tem `settings`. Testada em PGlite (totais, isolamento entre usuários, valor negativo recusado) e aplicada pelo Peter; confirmada via API. `lead_id` sem FK até a Fase 3 (conflito de nome com `public.leads`). |
+| 2026-11-12 | 1.2 ✓ | `lib/metrics/pace.ts` (§6.1): dias úteis decorridos contam hoje só após 12h em SP, `bdLeft` mínimo 1, projeção, `etaDate`, textos "No ritmo"/"Abaixo do ritmo"/"Marco batido", `resolvePeriod` (null = mês corrente). 13 testes: zero no meio do mês, no ritmo, manhã × tarde, batido, meta zero, virada de mês às 23h, primeiro dia, feriado. Total 61 testes. |
