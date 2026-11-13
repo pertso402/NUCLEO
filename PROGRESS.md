@@ -135,3 +135,4 @@ _(nenhum)_
 | 2026-11-12 | 0.7 ✓ | Peter instalou pelo Safari no iPhone 11 Pro: abre em tela cheia, login ok. Critérios de aceite da Fase 0 conferidos: login no iPhone e no PC ✓ · app instalado em tela cheia ✓ · identidade visual na tela vazia ✓ · 48 testes passando (local) ✓. Pendente só o CI rodar no GitHub. |
 | 2026-11-12 | 0.8 ✓ · Fase 0 ✓ | Push para github.com/pertso402/NUCLEO; CI #1 (typecheck + lint + 48 testes) passou em 1m21s. Todos os critérios de aceite da Fase 0 conferidos. |
 | 2026-11-12 | pré-1.1 | Removida a separação arte/pessoal de tudo (código, banco via nova migration, ARCHITECTURE, DESIGN, PROGRESS); SQLs de limpeza já usados removidos do repo. Marco inicial definido: R$ 10k de receita em nov/2026. Vercel conectada ao GitHub. |
+| 2026-11-12 | pré-1.1 ✓ | Migration `remove_scope` aplicada pelo Peter; confirmado via API (`categories.scope_default` não existe mais). |
