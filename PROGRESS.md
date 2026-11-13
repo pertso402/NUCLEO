@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 1
-**Próxima tarefa:** 1.3
+**Próxima tarefa:** 1.4
 
 ---
 
@@ -25,7 +25,7 @@
 ## Fase 1 — Dinheiro + Marcos + Captura (o MVP que precisa ser usado todo dia)
 - [x] 1.1 Migrations: `transactions`, `milestones` + views `v_month_totals`, `v_category_breakdown`
 - [x] 1.2 `lib/metrics/pace.ts` (ARCHITECTURE §6.1) com testes de borda
-- [ ] 1.3 `/api/ingest`: auth por token, parser OpenAI com `add_transaction`, `query`, `undo_last`, `ask_clarification`; log em `inbox_messages`
+- [x] 1.3 `/api/ingest`: auth por token, parser OpenAI com `add_transaction`, `query`, `undo_last`, `ask_clarification`; log em `inbox_messages`
 - [ ] 1.4 Fixtures de parser (mín. 15 frases de dinheiro) + teste
 - [x] 1.5 Tela **Comando** v1: anel do marco, ticker, faltam R$ X, barra de ritmo, projeção (Realtime atualiza ao lançar)
 - [ ] 1.6 `CaptureButton` (texto) + `CommandPalette` (Ctrl/Cmd+K) usando `/api/ingest`
@@ -109,6 +109,7 @@
 - 2026-11-13 — **1.5 adiantada antes de 1.3/1.4** (pedido do Peter). A 1.3 depende de chaves (Anthropic, `service_role`, token) que ainda não foram providenciadas; a 1.5 só lê o banco. O Realtime da 1.5 já fica pronto, então quando a 1.3 entrar o anel sobe sozinho.
 - 2026-11-13 — Vitrine `/dev/comando` (só em `next dev`, 404 em produção, sem login) mostra o hero nos estados zero/abaixo/no ritmo/batido com dados fictícios — o login real não pode ser automatizado (senha do Peter). O anel não anima o arco (DESIGN: animar só transform/opacity); quem anima é o número (ticker).
 - 2026-11-13 — **OpenAI no lugar da Claude API** para parsing e briefings (escolha do Peter). Modelos configuráveis por variável (`OPENAI_MODEL`, `OPENAI_MODEL_FALLBACK`, `OPENAI_MODEL_BRIEFING`) para trocar sem mexer no código. CLAUDE.md, ARCHITECTURE §2/§5.2/§8/§11 atualizados.
+- 2026-11-13 — Ingest: modelo `gpt-5.4-mini` (fallback `gpt-5.5`) via Chat Completions com function calling `strict`; `reasoning_effort` não é aceito com ferramentas nesse modelo, fica no padrão. Valor chega como texto e o servidor converte com `parseBRL` (sem float). Dono resolvido pela única linha de `settings` (projeto compartilhado). `/api/ingest` aceita `x-nucleo-token` (n8n/Siri) **ou** a sessão do dono (botão de captura e palette, Fase 1.6). Rate limit em memória por instância (freio, não garantia).
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
@@ -144,3 +145,4 @@ _(nenhum)_
 | 2026-11-12 | 1.2 ✓ | `lib/metrics/pace.ts` (§6.1): dias úteis decorridos contam hoje só após 12h em SP, `bdLeft` mínimo 1, projeção, `etaDate`, textos "No ritmo"/"Abaixo do ritmo"/"Marco batido", `resolvePeriod` (null = mês corrente). 13 testes: zero no meio do mês, no ritmo, manhã × tarde, batido, meta zero, virada de mês às 23h, primeiro dia, feriado. Total 61 testes. |
 | 2026-11-13 | 1.5 ✓ | Comando v1: `RingProgress` (arco Volt com glow, tick Ember/Volt de "onde deveria estar", Gold só no batido), `StatTicker` (600ms, respeita reduced-motion), `PaceBar`, `Money` (R$ 50%/centavos apagados), `MilestoneHero` (faltam, dias úteis, precisa × ritmo por dia, resumo), `lib/data/comando.ts` (marco ativo de menor `position` + soma dos lançamentos confirmados) e `lib/metrics/milestone-value.ts` (6 testes). `RealtimeRefresh` re-renderiza ao mudar `transactions`/`milestones` e ao voltar o foco. Saudação por hora e data em SP. Verificado em 375×812 e 1366×900 pela vitrine. Total 67 testes. |
 | 2026-11-13 | 1.5 ✓ (validada) | Peter abriu o app publicado e o Comando mostrou o marco de R$ 10k com os dados reais. |
+| 2026-11-13 | 1.3 ✓ | `/api/ingest` + `lib/ingest/{tools,parser,executor,run}.ts`: token em tempo constante, rate limit 30/min, inbox registrado antes de processar, `add_transaction` (categoria por nome sem acento, fallback Outros/Outras receitas, data relativa), `query` (marco, resumo do mês, total por categoria — números do SQL), `undo_last` (reverte a última captura e marca `undone`), `ask_clarification` (próxima mensagem do canal em 10 min vira resposta). Resposta no formato §5.2 com o marco a cada receita. Teste de ponta a ponta no banco real: 401 sem token, receita/2 despesas/consulta/desfaz×2/esclarecimento → todos certos, 2–6 s por frase; registros de teste apagados. 10 testes unitários novos (77 no total). |
