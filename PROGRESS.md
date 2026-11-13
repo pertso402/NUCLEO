@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 0
-**Próxima tarefa:** 0.4 (bloqueada) · 0.7
+**Próxima tarefa:** 0.8 (deploy) → depois testar 0.7 no iPhone
 
 ---
 
@@ -12,8 +12,8 @@
 - [x] 0.1 Criar projeto Next.js (App Router, TS strict, ESLint, Tailwind) + estrutura de pastas do ARCHITECTURE.md §3
 - [x] 0.2 Instalar fontes (Unbounded, Geist, Geist Mono) e tokens do DESIGN.md §2–4 em `globals.css` + `tailwind.config`
 - [x] 0.3 Componentes base: `Button`, `HudCard`, `StatTile`, `Chip`, `GridBackground`, `TabBar`, sidebar desktop
-- [ ] 0.4 Projeto Supabase + clients (server/client/admin) + Auth por e-mail OTP + middleware protegendo `(app)`
-- [ ] 0.5 Migration inicial: `settings`, `principles`, `categories` (com seed), `inbox_messages` + RLS + trigger `updated_at`
+- [x] 0.4 Projeto Supabase + clients (server/client/admin) + Auth por e-mail OTP + middleware protegendo `(app)`
+- [x] 0.5 Migration inicial: `settings`, `principles`, `categories` (com seed), `inbox_messages` + RLS + trigger `updated_at`
 - [x] 0.6 `lib/money.ts` e `lib/dates.ts` (fuso SP) + `business-days.ts` com testes
 - [ ] 0.7 PWA: manifest, ícones, Serwist, splash; testar "Adicionar à Tela de Início" no iPhone
 - [ ] 0.8 Deploy na Vercel com variáveis de ambiente; CI rodando typecheck + lint + test
@@ -106,7 +106,6 @@
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
-- 2026-11-12 — **0.4/0.5:** projeto definido (`tarulbqnnbqdrvwsphcw`), mas o conector não tem acesso a ele e a connection string não chegou ao `.env.local`. Peter roda o SQL pelo SQL Editor. Aguardando: resultado de `supabase/verificacao.sql` → aprovação da lista de exclusão → aplicar migration → criar usuário + template OTP com `{{ .Token }}`.
 - 2026-11-12 — **0.8: deploy na Vercel não feito.** Depende do Supabase (sem as variáveis o app responde 503 em tudo menos `/login`) e de OK do Peter para publicar. Também falta remoto no GitHub para o CI (`.github/workflows/ci.yml` já pronto) rodar.
 
 ## Configuração pendente com o Peter
@@ -129,3 +128,4 @@
 | 2026-11-12 | 0.7 (parcial) | `app/manifest.ts` (standalone, #05060A), ícones 180/192/512 + maskable + SVG, splash 1125×2436 (iPhone 11 Pro), meta iOS `black-translucent`, Serwist (`app/sw.ts` + `SerwistProvider`). Build ok; manifest/SW servidos com 200 no `next start`. O navegador embutido não registra SW nenhum (nem um trivial), então o teste real fica para o iPhone com HTTPS, após o deploy (0.8). |
 | 2026-11-12 | 0.8 (parcial) | CI em GitHub Actions (Node 24: `npm ci` → typecheck → lint → test). Local: typecheck/lint ok, 48 testes passando. Deploy pendente (ver Bloqueios). |
 | 2026-11-12 | 0.4/0.5 | Limpeza dos sistemas chapelao_/arte_ no Supabase compartilhado (aprovada pelo Peter, inclusive tabelas com dados). Migration inicial aplicada (tabelas confirmadas via API). Usuário criado. Login trocado para senha única (sem e-mail na tela); testado contra o Supabase real (senha errada → "Senha incorreta."). Falta o Peter definir a senha e entrar. |
+| 2026-11-12 | 0.4/0.5 ✓ | Peter definiu a senha e entrou; logs do dev mostram as rotas protegidas respondendo 200 com sessão. Checagem completa de gatilhos (`supabase/checar_migration.sql`) não foi rodada; tabelas e RLS confirmados via API. |
