@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatBRL, parseBRL, toCents, type Cents } from "@/lib/money";
 import { todayISO, type ISODate } from "@/lib/dates";
-import { loadHighlightMilestone } from "@/lib/data/milestone";
+import { loadHighlightMilestone, syncAchievements } from "@/lib/data/milestone";
 import type { ToolCall } from "./tools";
 
 export interface Category {
@@ -195,6 +195,10 @@ export function milestoneLine(title: string, pace: { currentCents: Cents; remain
   return `📈 Marco "${title}": ${brl(pace.currentCents)} → faltam ${brl(pace.remainingCents)} (${Math.floor(pace.pct * 100)}%)`;
 }
 
+export function achievementLine(title: string, currentCents: Cents, days: number): string {
+  return `🏆 Marco "${title}" batido! ${brl(currentCents)} em ${days} ${days === 1 ? "dia" : "dias"}`;
+}
+
 export async function executeCalls(calls: ToolCall[], ctx: ExecContext): Promise<ActionOutcome[]> {
   const out: ActionOutcome[] = [];
   for (const call of calls) {
@@ -219,6 +223,11 @@ export async function executeCalls(calls: ToolCall[], ctx: ExecContext): Promise
 /** Monta a resposta: linhas das ações + estado do marco se entrou receita + dica do "desfaz". */
 export async function composeReply(outcomes: ActionOutcome[], ctx: ExecContext): Promise<string> {
   const lines = outcomes.map((o) => o.line);
+  // Qualquer lançamento pode bater um marco (receita ou saldo do mês).
+  if (outcomes.some((o) => o.created?.length)) {
+    const batidos = await syncAchievements(ctx.supabase, { userId: ctx.userId, now: ctx.now });
+    for (const b of batidos) lines.push(achievementLine(b.title, b.currentCents, b.days));
+  }
   if (outcomes.some((o) => o.incomeAdded)) {
     const h = await loadHighlightMilestone(ctx.supabase, { userId: ctx.userId, now: ctx.now });
     if (h) lines.push(milestoneLine(h.milestone.title, h.pace));

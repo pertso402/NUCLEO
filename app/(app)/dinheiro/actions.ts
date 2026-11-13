@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { parseISODate } from "@/lib/dates";
 import { parseBRL } from "@/lib/money";
+import { syncAchievements } from "@/lib/data/milestone";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -35,9 +36,10 @@ async function authed() {
   return data.user ? supabase : null;
 }
 
-function done(): ActionResult {
-  revalidatePath("/dinheiro");
-  revalidatePath("/");
+/** Depois de mexer em lançamentos: confere se algum marco foi batido e atualiza as telas. */
+async function done(supabase: Awaited<ReturnType<typeof createClient>>): Promise<ActionResult> {
+  await syncAchievements(supabase).catch(() => []); // conquista é bônus: não derruba a edição
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -71,7 +73,7 @@ export async function updateTransaction(input: UpdateTransactionInput): Promise<
     })
     .eq("id", v.id);
   if (error) return { ok: false, error: "Não foi possível salvar." };
-  return done();
+  return done(supabase);
 }
 
 /** Confirma um lançamento `pending_review` (passa a contar nos totais e no marco). */
@@ -81,7 +83,7 @@ export async function confirmTransaction(txId: string): Promise<ActionResult> {
   if (!supabase) return { ok: false, error: "Sessão expirada. Entre de novo." };
   const { error } = await supabase.from("transactions").update({ status: "confirmed" }).eq("id", txId);
   if (error) return { ok: false, error: "Não foi possível confirmar." };
-  return done();
+  return done(supabase);
 }
 
 export async function deleteTransaction(txId: string): Promise<ActionResult> {
@@ -90,5 +92,5 @@ export async function deleteTransaction(txId: string): Promise<ActionResult> {
   if (!supabase) return { ok: false, error: "Sessão expirada. Entre de novo." };
   const { error } = await supabase.from("transactions").delete().eq("id", txId);
   if (error) return { ok: false, error: "Não foi possível excluir." };
-  return done();
+  return done(supabase);
 }

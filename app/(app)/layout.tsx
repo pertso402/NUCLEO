@@ -4,8 +4,13 @@ import { GridBackground } from "@/components/hud/GridBackground";
 import { RealtimeRefresh } from "@/components/hud/RealtimeRefresh";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { TabBar } from "@/components/ui/TabBar";
+import { Celebration } from "@/components/milestones/Celebration";
+import { loadRecentAchievements } from "@/lib/data/milestone";
+import { createClient } from "@/lib/supabase/server";
 
-export default function AppLayout({ children }: LayoutProps<"/">) {
+export default async function AppLayout({ children }: LayoutProps<"/">) {
+  // Conquistas recentes: a celebração aparece em qualquer tela (uma vez por aparelho).
+  const recent = await loadRecentAchievements(await createClient());
   return (
     <CaptureProvider>
       <GridBackground />
@@ -20,6 +25,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       </div>
       <CaptureButton />
       <TabBar />
+      <Celebration items={recent} />
     </CaptureProvider>
   );
 }
