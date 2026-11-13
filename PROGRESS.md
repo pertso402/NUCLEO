@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 0
-**Próxima tarefa:** 0.7 (teste no iPhone) · 0.8 (CI no GitHub)
+**Próxima tarefa:** 0.8 (só falta o CI no GitHub) → Fase 1
 
 ---
 
@@ -15,7 +15,7 @@
 - [x] 0.4 Projeto Supabase + clients (server/client/admin) + Auth por e-mail OTP + middleware protegendo `(app)`
 - [x] 0.5 Migration inicial: `settings`, `principles`, `categories` (com seed), `inbox_messages` + RLS + trigger `updated_at`
 - [x] 0.6 `lib/money.ts` e `lib/dates.ts` (fuso SP) + `business-days.ts` com testes
-- [ ] 0.7 PWA: manifest, ícones, Serwist, splash; testar "Adicionar à Tela de Início" no iPhone
+- [x] 0.7 PWA: manifest, ícones, Serwist, splash; testar "Adicionar à Tela de Início" no iPhone
 - [ ] 0.8 Deploy na Vercel com variáveis de ambiente; CI rodando typecheck + lint + test
 
 **Critérios de aceite:** login funciona no iPhone e no PC · app instalado abre em tela cheia · tela vazia já tem a identidade visual (grade, tab bar, fontes) · testes passando.
@@ -131,3 +131,4 @@
 | 2026-11-12 | 0.4/0.5 | Limpeza dos sistemas chapelao_/arte_ no Supabase compartilhado (aprovada pelo Peter, inclusive tabelas com dados). Migration inicial aplicada (tabelas confirmadas via API). Usuário criado. Login trocado para senha única (sem e-mail na tela); testado contra o Supabase real (senha errada → "Senha incorreta."). Falta o Peter definir a senha e entrar. |
 | 2026-11-12 | 0.4/0.5 ✓ | Peter definiu a senha e entrou; logs do dev mostram as rotas protegidas respondendo 200 com sessão. Checagem completa de gatilhos (`supabase/checar_migration.sql`) não foi rodada; tabelas e RLS confirmados via API. |
 | 2026-11-12 | 0.8 (deploy ✓) | Publicado em https://nucleo-beta.vercel.app. Verificado: `/` e rotas protegidas → 307 para `/login`; `/login` 200; manifest, `/serwist/sw.js` (com `Service-Worker-Allowed: /`), ícones e splash 200; tela de login renderiza no mobile. Primeira publicação deu 404 (framework "Other"), corrigido com `vercel.json`. |
+| 2026-11-12 | 0.7 ✓ | Peter instalou pelo Safari no iPhone 11 Pro: abre em tela cheia, login ok. Critérios de aceite da Fase 0 conferidos: login no iPhone e no PC ✓ · app instalado em tela cheia ✓ · identidade visual na tela vazia ✓ · 48 testes passando (local) ✓. Pendente só o CI rodar no GitHub. |
