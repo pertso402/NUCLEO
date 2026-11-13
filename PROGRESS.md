@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 0
-**Próxima tarefa:** 0.8 (deploy) → depois testar 0.7 no iPhone
+**Próxima tarefa:** 0.7 (teste no iPhone) · 0.8 (CI no GitHub)
 
 ---
 
@@ -103,10 +103,11 @@
 - 2026-11-12 — Seed de `settings` + categorias por **trigger em `auth.users`** (`seed_user_defaults`), pois numa migration não existe `auth.uid()`. A migration também semeia usuários já existentes. Funções `security definer` com `search_path = ''` e `execute` revogado de anon/authenticated.
 - 2026-11-12 — PWA com `@serwist/turbopack` (o `@serwist/next` exige webpack; Next 16 builda com Turbopack). SW servido por route handler em `/serwist/sw.js`, desligado em dev. `/api`, `/auth` e Supabase sempre `NetworkOnly`. Ícones gerados por `scripts/generate-icons.mjs` (N geométrico em paths, sem depender de fonte instalada).
 - 2026-11-12 — Banco: projeto Supabase **existente** do Peter (`tarulbqnnbqdrvwsphcw`), compartilhado com outros sistemas (schema `prospector`, `public.leads/conversas/mensagens`). Por isso funções e trigger do NÚCLEO levam prefixo `nucleo_` e a migration não semeia todos os `auth.users`. **Atenção fase 3:** `public.leads` já existe (outro sistema); o pipeline do NÚCLEO vai precisar de outro nome ou schema.
+- 2026-11-12 — Vercel: projeto `nucleo` (conta pertso402), produção em https://nucleo-beta.vercel.app. `vercel.json` fixa framework Next.js (o projeto criado pelo CLI veio como "Other" e só publicava `public/`) e região `gru1` (São Paulo, perto do Supabase sa-east). Node fixado em 24.x via `engines`. Variáveis em produção: URL e chave publicável do Supabase + `NUCLEO_OWNER_EMAIL`.
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
-- 2026-11-12 — **0.8: deploy na Vercel não feito.** Depende do Supabase (sem as variáveis o app responde 503 em tudo menos `/login`) e de OK do Peter para publicar. Também falta remoto no GitHub para o CI (`.github/workflows/ci.yml` já pronto) rodar.
+- 2026-11-12 — **0.8 (só o CI):** deploy feito; falta um repositório no GitHub para o `.github/workflows/ci.yml` rodar.
 
 ## Configuração pendente com o Peter
 - [ ] Marco inicial (título, métrica, valor alvo)
@@ -129,3 +130,4 @@
 | 2026-11-12 | 0.8 (parcial) | CI em GitHub Actions (Node 24: `npm ci` → typecheck → lint → test). Local: typecheck/lint ok, 48 testes passando. Deploy pendente (ver Bloqueios). |
 | 2026-11-12 | 0.4/0.5 | Limpeza dos sistemas chapelao_/arte_ no Supabase compartilhado (aprovada pelo Peter, inclusive tabelas com dados). Migration inicial aplicada (tabelas confirmadas via API). Usuário criado. Login trocado para senha única (sem e-mail na tela); testado contra o Supabase real (senha errada → "Senha incorreta."). Falta o Peter definir a senha e entrar. |
 | 2026-11-12 | 0.4/0.5 ✓ | Peter definiu a senha e entrou; logs do dev mostram as rotas protegidas respondendo 200 com sessão. Checagem completa de gatilhos (`supabase/checar_migration.sql`) não foi rodada; tabelas e RLS confirmados via API. |
+| 2026-11-12 | 0.8 (deploy ✓) | Publicado em https://nucleo-beta.vercel.app. Verificado: `/` e rotas protegidas → 307 para `/login`; `/login` 200; manifest, `/serwist/sw.js` (com `Service-Worker-Allowed: /`), ícones e splash 200; tela de login renderiza no mobile. Primeira publicação deu 404 (framework "Other"), corrigido com `vercel.json`. |
