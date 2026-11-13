@@ -18,7 +18,7 @@ export function Money({
   className?: string;
 }) {
   const p = brlParts(cents);
-  const toneClass = { default: "text-text-0", volt: "text-volt", ember: "text-ember", flare: "text-flare" }[tone];
+  const toneClass = { default: "text-text-0", volt: "neon-volt", ember: "text-ember", flare: "neon-flare" }[tone];
   return (
     <span className={cn("num whitespace-nowrap", className)}>
       <span className="mr-[0.15em] align-baseline text-[0.5em] text-text-1">

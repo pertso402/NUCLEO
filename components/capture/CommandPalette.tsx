@@ -55,7 +55,7 @@ export function CommandPalette({
       {open && (
         <motion.div
           key="overlay"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-bg-0/80 lg:items-start lg:pt-[18vh]"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-bg-0/70 backdrop-blur-sm lg:items-start lg:pt-[18vh]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -66,7 +66,7 @@ export function CommandPalette({
             role="dialog"
             aria-modal="true"
             aria-label="Lançar no NÚCLEO"
-            className="pb-safe w-full max-w-xl rounded-t-lg border border-line-strong bg-bg-2 lg:rounded-lg"
+            className="pb-safe glass edge-light relative w-full max-w-xl rounded-t-lg border border-volt/25 shadow-[0_0_40px_rgba(200,255,46,0.12)] lg:rounded-lg"
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
@@ -112,14 +112,14 @@ export function CommandPalette({
                 enterKeyHint="send"
                 maxLength={2000}
                 aria-label="O que aconteceu?"
-                className="num h-12 min-w-0 flex-1 rounded-sm border border-line bg-bg-3 px-3 text-base text-text-0 placeholder:text-text-2 focus:border-line-strong focus:outline-none"
+                className="num h-12 min-w-0 flex-1 rounded-sm border border-line bg-white/[0.04] px-3 text-base text-text-0 placeholder:text-text-2 focus:border-volt/50 focus:shadow-[0_0_12px_rgba(200,255,46,0.15)] focus:outline-none"
               />
               <button
                 type="submit"
                 disabled={!text.trim() || busy}
                 aria-label="Enviar"
                 className={cn(
-                  "flex size-12 shrink-0 items-center justify-center rounded-sm bg-volt text-bg-0 transition-[box-shadow,opacity] duration-150",
+                  "flex size-12 shrink-0 items-center justify-center rounded-sm bg-volt text-bg-0 shadow-[0_0_10px_rgba(200,255,46,0.35)] transition-[box-shadow,opacity,transform] duration-150 active:scale-90",
                   "hover:shadow-glow-volt disabled:opacity-40 disabled:hover:shadow-none",
                 )}
               >

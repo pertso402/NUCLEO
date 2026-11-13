@@ -17,10 +17,15 @@ export interface HeroMilestone {
 export function MilestoneHero({ milestone, pace }: { milestone: HeroMilestone; pace: PaceResult }) {
   const pctLabel = Math.floor(pace.pct * 100);
   return (
-    <HudCard variant="target" onTrack={pace.onTrack && !pace.achieved} label="Marco em destaque">
+    <HudCard
+      variant="target"
+      onTrack={pace.onTrack && !pace.achieved}
+      accent={pace.achieved ? "gold" : "volt"}
+      label="Marco em destaque"
+    >
       <div className="flex flex-col items-center gap-5">
         <div className="text-center">
-          <h2 className="font-display text-lg font-semibold text-text-0">{milestone.title}</h2>
+          <h2 className="neon-white font-display text-lg font-semibold text-text-0">{milestone.title}</h2>
           <p className="mt-1 text-xs text-text-2">
             {milestone.metricLabel}
             {milestone.deadline && <> · até {formatShortDate(milestone.deadline)}</>}
@@ -33,19 +38,19 @@ export function MilestoneHero({ milestone, pace }: { milestone: HeroMilestone; p
           onTrack={pace.onTrack}
           achieved={pace.achieved}
         >
-          <StatTicker cents={pace.currentCents} showCents={false} className="text-2xl lg:text-3xl" />
+          <StatTicker cents={pace.currentCents} showCents={false} className="neon-white text-2xl lg:text-3xl" />
           <span className="mt-1 text-sm text-text-2">
             de <Money cents={pace.targetCents} showCents={false} className="text-sm" />
           </span>
-          <span className={`num mt-2 text-sm ${pace.achieved ? "text-gold" : "text-volt"}`}>{pctLabel}%</span>
+          <span className={`num mt-2 text-sm ${pace.achieved ? "neon-gold" : "neon-volt"}`}>{pctLabel}%</span>
         </RingProgress>
 
         {pace.achieved ? (
-          <p className="text-center text-sm text-gold">Marco batido.</p>
+          <p className="neon-gold text-center text-sm">Marco batido.</p>
         ) : (
           <div className="w-full text-center">
             <p className="label-instrument">Faltam</p>
-            <Money cents={pace.remainingCents} showCents={false} className="text-3xl lg:text-4xl" />
+            <Money cents={pace.remainingCents} showCents={false} className="neon-white text-3xl lg:text-4xl" />
           </div>
         )}
 
@@ -63,7 +68,7 @@ export function MilestoneHero({ milestone, pace }: { milestone: HeroMilestone; p
 
         {!pace.achieved && (
           <dl className="grid w-full grid-cols-2 gap-2">
-            <div className="rounded-md border border-line bg-bg-1 p-3">
+            <div className="edge-light rounded-sm border border-line bg-white/[0.025] p-3">
               <dt className="label-instrument">Precisa / dia</dt>
               <dd className="mt-1 text-lg">
                 <Money
@@ -73,7 +78,7 @@ export function MilestoneHero({ milestone, pace }: { milestone: HeroMilestone; p
                 />
               </dd>
             </div>
-            <div className="rounded-md border border-line bg-bg-1 p-3">
+            <div className="edge-light rounded-sm border border-line bg-white/[0.025] p-3">
               <dt className="label-instrument">Ritmo / dia</dt>
               <dd className="mt-1 text-lg">
                 <Money

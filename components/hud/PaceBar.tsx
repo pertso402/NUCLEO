@@ -22,17 +22,17 @@ export function PaceBar({ value, expected, className }: PaceBarProps) {
   const hi = Math.max(value, expected);
   return (
     <div className={cn("w-full", className)}>
-      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-bg-3">
-        <div className="absolute inset-y-0 left-0 bg-volt" style={{ width: pct(lo) }} />
+      <div className="relative h-2 w-full rounded-full bg-white/[0.06]">
+        <div className="absolute inset-y-0 left-0 rounded-full bg-volt shadow-glow-volt" style={{ width: pct(lo) }} />
         <div
-          className={cn("absolute inset-y-0", ahead ? "bg-volt" : "bg-ember/25")}
+          className={cn("absolute inset-y-0 rounded-r-full", ahead ? "bg-volt shadow-glow-volt" : "bg-ember/30")}
           style={{ left: pct(lo), width: `calc(${pct(hi)} - ${pct(lo)})` }}
         />
       </div>
       <div className="relative h-0">
         <span
           aria-hidden
-          className="absolute -top-3 h-4.5 w-px bg-text-2"
+          className="absolute -top-3.5 h-5 w-0.5 rounded-full bg-text-0 shadow-[0_0_8px_rgba(242,244,248,0.6)]"
           style={{ left: pct(expected) }}
         />
       </div>

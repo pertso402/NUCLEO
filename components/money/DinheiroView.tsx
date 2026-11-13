@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { HudCard } from "@/components/hud/HudCard";
 import { Money } from "@/components/hud/Money";
-import { RealtimeRefresh } from "@/components/hud/RealtimeRefresh";
 import { CategoryBars } from "@/components/money/CategoryBars";
 import { CumulativeChart } from "@/components/money/CumulativeChart";
 import { MonthlyBarsChart } from "@/components/money/MonthlyBarsChart";
@@ -51,12 +50,11 @@ export function DinheiroView({
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-start">
-      <RealtimeRefresh tables={["transactions"]} />
 
       <header className="flex items-center justify-between gap-2 lg:col-span-12">
         <div>
           <p className="label-instrument mb-1">Dinheiro</p>
-          <h1 className="font-display text-xl font-semibold text-text-0 first-letter:uppercase">
+          <h1 className="neon-white font-display text-xl font-semibold text-text-0 first-letter:uppercase">
             {formatMonthLong(month)}
           </h1>
         </div>
@@ -97,6 +95,7 @@ export function DinheiroView({
       {/* Receita acumulada */}
       <HudCard
         label="Receita acumulada"
+        accent="volt"
         action={
           data.monthTarget ? (
             <span className="num text-xs text-text-2">
@@ -153,7 +152,7 @@ export function DinheiroView({
 
       {/* Categorias */}
       {(expenseSlices.length > 0 || incomeSlices.length > 0) && (
-        <HudCard label="Categorias" className="lg:col-span-5 lg:col-start-8 lg:row-start-4">
+        <HudCard label="Categorias" accent="plasma" className="lg:col-span-5 lg:col-start-8 lg:row-start-4">
           <div className="flex flex-col gap-6">
             {expenseSlices.length > 0 && (
               <div className="flex flex-col gap-3">
@@ -174,6 +173,7 @@ export function DinheiroView({
       {/* 12 meses */}
       <HudCard
         label="Últimos 12 meses"
+        accent="ion"
         action={
           <span className="flex items-center gap-3 text-xs text-text-2">
             <Legend color="bg-volt" label="Receita" />
@@ -190,7 +190,7 @@ export function DinheiroView({
 
 function SummaryTile({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-md border border-line bg-bg-2 p-3">
+    <div className="glass edge-light flex min-w-0 flex-col gap-1 rounded-md border border-line p-3">
       <span className="label-instrument truncate">{label}</span>
       <span className="truncate text-lg lg:text-2xl">{children}</span>
     </div>
@@ -198,7 +198,7 @@ function SummaryTile({ label, children }: { label: string; children: React.React
 }
 
 function MonthLink({ href, label, children }: { href: string | null; label: string; children: React.ReactNode }) {
-  const cls = "flex size-10 items-center justify-center rounded-sm border border-line";
+  const cls = "glass flex size-10 items-center justify-center rounded-sm border border-line transition-transform duration-150 active:scale-90";
   if (!href) {
     return (
       <span aria-hidden className={cn(cls, "text-text-2 opacity-40")}>
@@ -207,7 +207,7 @@ function MonthLink({ href, label, children }: { href: string | null; label: stri
     );
   }
   return (
-    <Link href={href} aria-label={label} className={cn(cls, "text-text-1 hover:border-line-strong hover:text-text-0")}>
+    <Link href={href} aria-label={label} className={cn(cls, "text-text-1 hover:border-volt/50 hover:text-volt")}>
       {children}
     </Link>
   );

@@ -19,7 +19,7 @@ export function StatementFilters({ query, categories }: { query: DinheiroQuery; 
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <nav aria-label="Tipo" className="flex gap-1 rounded-sm border border-line bg-bg-1 p-1">
+      <nav aria-label="Tipo" className="glass flex gap-1 rounded-full border border-line p-1">
         {KINDS.map((k) => {
           const active = query.tipo === k.value;
           // Trocar o tipo limpa a categoria se ela não for do novo tipo.
@@ -31,8 +31,10 @@ export function StatementFilters({ query, categories }: { query: DinheiroQuery; 
               aria-current={active ? "true" : undefined}
               scroll={false}
               className={cn(
-                "flex h-8 items-center rounded-sm px-3 text-sm transition-colors duration-150",
-                active ? "bg-bg-3 text-text-0" : "text-text-2 hover:text-text-1",
+                "flex h-8 items-center rounded-full px-3.5 text-sm transition-[background-color,color,transform] duration-150 active:scale-95",
+                active
+                  ? "bg-volt/15 text-volt shadow-[inset_0_0_0_1px_rgba(200,255,46,0.4),0_0_12px_rgba(200,255,46,0.2)]"
+                  : "text-text-2 hover:text-text-1",
               )}
             >
               {k.label}
@@ -44,7 +46,7 @@ export function StatementFilters({ query, categories }: { query: DinheiroQuery; 
         aria-label="Categoria"
         value={query.cat ?? ""}
         onChange={(e) => router.push(dinheiroHref({ ...query, cat: e.target.value || null }), { scroll: false })}
-        className="h-10 min-w-0 basis-full rounded-sm border border-line bg-bg-1 px-3 text-base text-text-1 focus:border-line-strong focus:outline-none sm:basis-auto"
+        className="glass h-10 min-w-0 basis-full rounded-full border border-line px-4 text-base text-text-1 focus:border-line-strong focus:outline-none sm:basis-auto"
       >
         <option value="">Todas as categorias</option>
         {options.map((c) => (

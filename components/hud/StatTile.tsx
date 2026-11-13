@@ -14,7 +14,7 @@ export interface StatTileProps {
 
 export function StatTile({ label, value, unit, delta, sparkline, className }: StatTileProps) {
   return (
-    <div className={cn("flex min-w-0 flex-col gap-1 rounded-md border border-line bg-bg-2 p-3", className)}>
+    <div className={cn("glass edge-light flex min-w-0 flex-col gap-1 rounded-md border border-line p-3", className)}>
       <span className="label-instrument truncate">{label}</span>
       <div className="flex items-baseline gap-1">
         <span className="num text-xl text-text-0">{value}</span>

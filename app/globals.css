@@ -11,8 +11,11 @@
   --bg-1: #0a0c12;
   --bg-2: #11141c;
   --bg-3: #181c27;
-  --line: rgba(255, 255, 255, 0.06);
-  --line-strong: rgba(255, 255, 255, 0.12);
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.14);
+  /* Vidro: cards translúcidos sobre o fundo de luzes */
+  --glass: rgba(14, 17, 26, 0.72);
+  --glass-strong: rgba(20, 24, 36, 0.86);
 
   /* Texto */
   --text-0: #f2f4f8;
@@ -29,9 +32,11 @@
   --gold: #ffd24a;
 
   /* Glows — máx. 1–2 por tela */
-  --glow-volt: 0 0 24px rgba(200, 255, 46, 0.35);
-  --glow-plasma: 0 0 24px rgba(124, 92, 255, 0.35);
-  --glow-gold: 0 0 32px rgba(255, 210, 74, 0.45);
+  --glow-volt: 0 0 12px rgba(200, 255, 46, 0.55), 0 0 36px rgba(200, 255, 46, 0.25);
+  --glow-plasma: 0 0 12px rgba(124, 92, 255, 0.55), 0 0 36px rgba(124, 92, 255, 0.25);
+  --glow-ion: 0 0 12px rgba(46, 230, 255, 0.5), 0 0 36px rgba(46, 230, 255, 0.2);
+  --glow-flare: 0 0 12px rgba(255, 61, 110, 0.5), 0 0 32px rgba(255, 61, 110, 0.2);
+  --glow-gold: 0 0 16px rgba(255, 210, 74, 0.6), 0 0 48px rgba(255, 210, 74, 0.3);
 
   /* Movimento */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -58,6 +63,8 @@
   --color-ember: var(--ember);
   --color-flare: var(--flare);
   --color-gold: var(--gold);
+  --color-glass: var(--glass);
+  --color-glass-strong: var(--glass-strong);
   --color-transparent: transparent;
   --color-current: currentColor;
 
@@ -91,9 +98,9 @@
 
   /* Raios: 6 (chips, inputs) · 12 (cards) · 20 (sheets, hero) */
   --radius-*: initial;
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  --radius-sm: 10px;
+  --radius-md: 18px;
+  --radius-lg: 26px;
   --radius-full: 9999px;
 
   /* Sombras: só glows (sem sombras pretas) */
@@ -101,6 +108,8 @@
   --shadow-glow-volt: var(--glow-volt);
   --shadow-glow-plasma: var(--glow-plasma);
   --shadow-glow-gold: var(--glow-gold);
+  --shadow-glow-ion: var(--glow-ion);
+  --shadow-glow-flare: var(--glow-flare);
 
   --ease-out: var(--ease-out);
 
@@ -151,12 +160,99 @@ body {
     color: var(--text-2);
   }
 
+  /* Texto em neon (números de receita/progresso). Só onde há avanço. */
+  .neon-volt {
+    color: var(--volt);
+    text-shadow: 0 0 10px rgba(200, 255, 46, 0.55), 0 0 28px rgba(200, 255, 46, 0.25);
+  }
+  .neon-flare {
+    color: var(--flare);
+    text-shadow: 0 0 10px rgba(255, 61, 110, 0.5), 0 0 24px rgba(255, 61, 110, 0.2);
+  }
+  .neon-gold {
+    color: var(--gold);
+    text-shadow: 0 0 12px rgba(255, 210, 74, 0.6), 0 0 32px rgba(255, 210, 74, 0.3);
+  }
+  /* Branco com halo leve: títulos e números hero */
+  .neon-white {
+    text-shadow: 0 0 18px rgba(242, 244, 248, 0.25);
+  }
+
+  /* Vidro: card translúcido com desfoque. Usar em poucos elementos por tela (custo no iPhone). */
+  .glass {
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
+  }
+  @supports not (backdrop-filter: blur(1px)) {
+    .glass {
+      background: var(--glass-strong);
+    }
+  }
+
+  /* Borda de luz: filete brilhante no topo + brilho interno sutil */
+  .edge-light {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.07),
+      inset 0 0 24px rgba(255, 255, 255, 0.015);
+  }
+
+  /* Esqueleto de carregamento: brilho que passa (só transform) */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-3);
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(200, 255, 46, 0.06), transparent);
+    animation: nucleo-shimmer 1.1s var(--ease-out) infinite;
+  }
+
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
 
   .pt-safe {
     padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Brilho neon nos gráficos (Recharts): poucos elementos, custo baixo */
+.chart-glow-volt .recharts-area-curve,
+.chart-glow-volt .recharts-bar-rectangle path {
+  filter: drop-shadow(0 0 4px rgba(200, 255, 46, 0.7)) drop-shadow(0 0 10px rgba(200, 255, 46, 0.3));
+}
+.chart-glow-flare .recharts-bar-rectangle path {
+  filter: drop-shadow(0 0 4px rgba(255, 61, 110, 0.6)) drop-shadow(0 0 10px rgba(255, 61, 110, 0.25));
+}
+
+@keyframes nucleo-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes nucleo-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3%, 2%, 0) scale(1.06);
+  }
+}
+
+@keyframes nucleo-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
   }
 }
 

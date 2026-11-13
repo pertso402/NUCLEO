@@ -27,9 +27,12 @@ export function CategoryBars({
                 <span className="ml-2 text-xs text-text-2">{Math.round(s.share * 100)}%</span>
               </span>
             </span>
-            <span className="block h-1 overflow-hidden rounded-full bg-bg-3">
+            <span className="block h-1.5 rounded-full bg-white/[0.06]">
               <span
-                className={cn("block h-full origin-left rounded-full", kind === "income" ? "bg-volt" : "bg-flare")}
+                className={cn(
+                  "block h-full origin-left rounded-full",
+                  kind === "income" ? "bg-volt shadow-glow-volt" : "bg-flare shadow-glow-flare",
+                )}
                 style={{ transform: `scaleX(${max > 0 ? s.totalCents / max : 0})` }}
               />
             </span>

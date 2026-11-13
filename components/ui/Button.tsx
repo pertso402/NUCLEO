@@ -4,8 +4,9 @@ import { cn } from "@/lib/cn";
 type Variant = "primary" | "secondary" | "ghost";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-volt text-bg-0 hover:shadow-glow-volt disabled:hover:shadow-none",
-  secondary: "bg-bg-3 text-text-0 border border-line-strong hover:border-text-2",
+  primary:
+    "bg-volt text-bg-0 shadow-[0_0_10px_rgba(200,255,46,0.35)] hover:shadow-glow-volt disabled:shadow-none",
+  secondary: "bg-white/[0.05] text-text-0 border border-line-strong hover:border-text-2 hover:bg-white/[0.08]",
   ghost: "bg-transparent text-text-1 hover:text-text-0",
 };
 
@@ -26,7 +27,7 @@ export function Button({
       type={type}
       className={cn(
         "inline-flex h-11 items-center justify-center gap-2 rounded-sm px-4 text-sm font-semibold",
-        "transition-[box-shadow,border-color,color,transform] duration-150 ease-out active:scale-[0.98]",
+        "transition-[box-shadow,border-color,color,background-color,transform] duration-150 ease-out active:scale-[0.96]",
         "disabled:cursor-not-allowed disabled:opacity-50",
         variants[variant],
         block && "w-full",

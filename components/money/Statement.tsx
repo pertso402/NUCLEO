@@ -43,7 +43,7 @@ export function Statement({ transactions, categories }: { transactions: Transact
                 </span>
               )}
             </header>
-            <ul className="flex flex-col divide-y divide-line overflow-hidden rounded-md border border-line bg-bg-2">
+            <ul className="edge-light flex flex-col divide-y divide-line overflow-hidden rounded-md border border-line bg-bg-2/80">
               {items.map((t) => (
                 <li key={t.id} className={editing === t.id ? "p-1" : undefined}>
                   {editing === t.id ? (
@@ -75,7 +75,7 @@ function Row({ tx, categoryName, onEdit }: { tx: Transaction; categoryName?: str
     <button
       type="button"
       onClick={onEdit}
-      className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left transition-colors duration-150 hover:bg-bg-3"
+      className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left transition-[background-color,transform] duration-150 hover:bg-white/[0.04] active:scale-[0.99]"
     >
       <Icon size={16} strokeWidth={1.5} className="shrink-0 text-text-2" aria-label={`via ${source.label}`} />
       <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -93,7 +93,7 @@ function Row({ tx, categoryName, onEdit }: { tx: Transaction; categoryName?: str
         </span>
       </span>
       <span className={cn("num shrink-0 text-base", tx.status === "pending_review" && "opacity-60")}>
-        <span className={income ? "text-volt" : "text-text-1"}>{income ? "+" : "−"}</span>
+        <span className={income ? "neon-volt" : "text-text-1"}>{income ? "+" : "−"}</span>
         <Money cents={tx.amount_cents} tone={income ? "volt" : "default"} />
       </span>
     </button>

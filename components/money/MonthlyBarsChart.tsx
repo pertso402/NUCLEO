@@ -48,8 +48,8 @@ export function MonthlyBarsChart({ series, selected }: { series: MonthTotals[]; 
             cursor={{ fill: "var(--line)" }}
             content={<ChartTooltip labelFormatter={(l) => formatMonthLong(String(l))} />}
           />
-          <Bar dataKey="income" name="Receita" fill={CHART.volt} radius={[4, 4, 0, 0]} maxBarSize={14} />
-          <Bar dataKey="expense" name="Despesa" fill={CHART.flare} radius={[4, 4, 0, 0]} maxBarSize={14} />
+          <Bar className="chart-glow-volt" dataKey="income" name="Receita" fill={CHART.volt} radius={[4, 4, 0, 0]} maxBarSize={14} />
+          <Bar className="chart-glow-flare" dataKey="expense" name="Despesa" fill={CHART.flare} radius={[4, 4, 0, 0]} maxBarSize={14} />
         </BarChart>
       </ResponsiveContainer>
     </div>

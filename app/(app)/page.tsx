@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { HudCard } from "@/components/hud/HudCard";
 import { MilestoneHero } from "@/components/hud/MilestoneHero";
-import { RealtimeRefresh } from "@/components/hud/RealtimeRefresh";
 import { StatTile } from "@/components/hud/StatTile";
 import { formatLongDate, hourInSP, todayISO } from "@/lib/dates";
 import { getHighlightMilestone } from "@/lib/data/comando";
@@ -18,7 +17,6 @@ export default async function ComandoPage() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-12">
-      <RealtimeRefresh tables={["transactions", "milestones"]} />
 
       <header className="lg:col-span-12">
         <p className="label-instrument mb-1 first-letter:uppercase">{formatLongDate(todayISO(now))}</p>
