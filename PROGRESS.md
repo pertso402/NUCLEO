@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 1
-**Próxima tarefa:** 1.1
+**Próxima tarefa:** 1.2
 
 ---
 
@@ -23,7 +23,7 @@
 ---
 
 ## Fase 1 — Dinheiro + Marcos + Captura (o MVP que precisa ser usado todo dia)
-- [ ] 1.1 Migrations: `transactions`, `milestones` + views `v_month_totals`, `v_category_breakdown`
+- [x] 1.1 Migrations: `transactions`, `milestones` + views `v_month_totals`, `v_category_breakdown`
 - [ ] 1.2 `lib/metrics/pace.ts` (ARCHITECTURE §6.1) com testes de borda
 - [ ] 1.3 `/api/ingest`: auth por token, parser Claude com `add_transaction`, `query`, `undo_last`, `ask_clarification`; log em `inbox_messages`
 - [ ] 1.4 Fixtures de parser (mín. 15 frases de dinheiro) + teste
@@ -136,3 +136,4 @@ _(nenhum)_
 | 2026-11-12 | 0.8 ✓ · Fase 0 ✓ | Push para github.com/pertso402/NUCLEO; CI #1 (typecheck + lint + 48 testes) passou em 1m21s. Todos os critérios de aceite da Fase 0 conferidos. |
 | 2026-11-12 | pré-1.1 | Removida a separação arte/pessoal de tudo (código, banco via nova migration, ARCHITECTURE, DESIGN, PROGRESS); SQLs de limpeza já usados removidos do repo. Marco inicial definido: R$ 10k de receita em nov/2026. Vercel conectada ao GitHub. |
 | 2026-11-12 | pré-1.1 ✓ | Migration `remove_scope` aplicada pelo Peter; confirmado via API (`categories.scope_default` não existe mais). |
+| 2026-11-12 | 1.1 ✓ | Migration `20261112235000_money_milestones.sql`: `transactions` (centavos > 0, source, status, `external_id` único por usuário), `milestones` (métricas sem scope), views `v_month_totals` e `v_category_breakdown` com `security_invoker` (respeitam RLS; só `confirmed`), Realtime ligado nas duas tabelas, marco "R$ 10k de receita" (nov/2026) semeado só para quem tem `settings`. Testada em PGlite (totais, isolamento entre usuários, valor negativo recusado) e aplicada pelo Peter; confirmada via API. `lead_id` sem FK até a Fase 3 (conflito de nome com `public.leads`). |
