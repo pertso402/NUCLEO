@@ -90,7 +90,7 @@ Gold não aparece em nenhum outro contexto — tem que ser raro para ter peso.
 | `CommandPalette` | Ctrl/Cmd+K, sheet central `--bg-2`, input Geist Mono, mostra a resposta do ingest inline. |
 | `HudCard` | `--bg-2`, borda `--line`, raio 12, padding 16; label de seção no topo. |
 | `StatTile` | label (instrumento) + número Geist Mono + delta (Volt ↑ / Flare ↓) + sparkline opcional. |
-| `Chip` | stage do lead (Ion), scope (`arte` = Volt-dim, `pessoal` = `--bg-3`), alerta (Ember). |
+| `Chip` | stage do lead (Ion), categoria (`--bg-3`), alerta (Ember). |
 | `KanbanColumn` | header com contagem e soma de valor; cards com próxima ação e data (Ember se atrasado). |
 | `HabitHeatmap` | 12 semanas × 7 dias, células 12px, vazio `--bg-3`, feito Volt (opacidade por intensidade), recorde em Gold. |
 | `TabBar` | `--bg-1` com borda superior `--line`; ativo = ícone Volt + ponto de 4px; respeita safe-area do iPhone. |
@@ -100,7 +100,7 @@ Gold não aparece em nenhum outro contexto — tem que ser raro para ter peso.
 ## 8. Gráficos (Recharts customizado)
 - Sem fundo, sem grid vertical; grid horizontal `--line` tracejado.
 - Eixos `--text-2`, Geist Mono 11px.
-- Receita = Volt, despesa = Flare, ARTe vs pessoal = Volt vs `--text-1`.
+- Receita = Volt, despesa = Flare.
 - Tooltip `--bg-3` com borda `--line-strong`.
 - Barras com raio 4 no topo; linha de receita acumulada com gradiente Volt → transparente embaixo.
 

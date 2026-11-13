@@ -13,7 +13,7 @@ Objetivos de design do produto:
 3. **Plano estratégico pessoal** — objetivos trimestrais, revisão semanal e diária. O Peter faz isso para empresas; aqui ele faz para ele mesmo.
 4. **Fricção zero** — um áudio no WhatsApp resolve 90% dos lançamentos.
 
-Usuário único. Finanças pessoais e da ARTe ficam juntas, diferenciadas por uma etiqueta (`scope`: `arte` | `pessoal`) que o parser deduz automaticamente.
+Usuário único e **um dinheiro só**: o Peter trabalha como autônomo (serviços como PJ, sem CNPJ nem empresa) e não separa pessoal de trabalho. Não existe etiqueta `arte`/`pessoal`; quanto custa trabalhar (ferramentas, anúncios) sai das categorias.
 
 ---
 
@@ -126,8 +126,8 @@ Todas as tabelas: `id uuid pk default gen_random_uuid()`, `user_id uuid not null
 **principles** — `text`, `position int`, `active bool`. Princípios pessoais; um por dia em rotação no Comando.
 
 ### 4.2 Finanças
-**categories** — `name`, `kind` (`income`|`expense`), `scope_default` (`arte`|`pessoal`|null), `icon`, `color_token`, `archived bool`.
-Seed: Receita de cliente, Setup/implantação, Outras receitas · Alimentação, Transporte/Combustível, Moradia, Assinaturas/Ferramentas, Anúncios (ARTe), Lazer, Saúde, Roupas, Educação, Outros.
+**categories** — `name`, `kind` (`income`|`expense`), `icon`, `color_token`, `archived bool`.
+Seed: Receita de cliente, Setup/implantação, Outras receitas · Alimentação, Transporte/Combustível, Moradia, Assinaturas/Ferramentas, Anúncios, Lazer, Saúde, Roupas, Educação, Outros.
 
 **transactions**
 | coluna | tipo | nota |
@@ -135,7 +135,6 @@ Seed: Receita de cliente, Setup/implantação, Outras receitas · Alimentação,
 | occurred_on | date | dia do fato (fuso local) |
 | amount_cents | bigint | sempre positivo |
 | kind | enum `income`/`expense` | |
-| scope | enum `arte`/`pessoal` | |
 | category_id | uuid fk | |
 | description | text | |
 | counterparty | text | cliente/loja |
@@ -145,14 +144,14 @@ Seed: Receita de cliente, Setup/implantação, Outras receitas · Alimentação,
 | external_id | text unique null | id do Pluggy (dedupe) |
 | status | enum `confirmed`/`pending_review` | open finance entra como `pending_review` |
 
-**recurring_rules** (fase 2) — `description`, `amount_cents`, `kind`, `scope`, `category_id`, `day_of_month`, `active`, `lead_id null`. Gera lançamento `pending_review` no dia (mensalidade de cliente, aluguel, assinaturas).
+**recurring_rules** (fase 2) — `description`, `amount_cents`, `kind`, `category_id`, `day_of_month`, `active`, `lead_id null`. Gera lançamento `pending_review` no dia (mensalidade de cliente, aluguel, assinaturas).
 
 ### 4.3 Marcos e objetivos
 **milestones**
 | coluna | tipo | nota |
 |---|---|---|
 | title | text | ex.: "Primeiros R$ 10k/mês" |
-| metric | enum | `revenue_month_arte`, `revenue_month_total`, `revenue_cumulative_total`, `mrr_arte`, `net_month_total` |
+| metric | enum | `revenue_month` (receita do mês), `revenue_cumulative` (receita acumulada), `mrr` (mensalidades fechadas ativas), `net_month` (receita − despesa do mês) |
 | target_cents | bigint | |
 | period_start / period_end | date null | para métricas mensais, null = mês corrente recorrente |
 | deadline | date null | |
@@ -169,7 +168,7 @@ Seed: Receita de cliente, Setup/implantação, Outras receitas · Alimentação,
 **habits** — `name`, `icon`, `color_token`, `target_per_week int`, `active`, `position`.
 **habit_logs** — `habit_id`, `log_date date`, unique(`habit_id`,`log_date`).
 
-**time_entries** — `started_at`, `ended_at null` (null = timer rodando; no máximo 1 aberto — índice parcial único), `label text`, `scope`, `lead_id null`, `goal_id null`, `is_focus bool default true`.
+**time_entries** — `started_at`, `ended_at null` (null = timer rodando; no máximo 1 aberto — índice parcial único), `label text`, `lead_id null`, `goal_id null`, `is_focus bool default true`.
 
 ### 4.5 Pipeline (CRM)
 **leads**
@@ -206,7 +205,7 @@ Seed: Receita de cliente, Setup/implantação, Outras receitas · Alimentação,
 **sync_state** (fase 4) — `provider`, `item_id`, `last_synced_at`, `consent_expires_at`.
 
 ### 4.8 Views / funções SQL
-- `v_month_totals(month)` — receita/despesa/saldo por scope e total.
+- `v_month_totals(month)` — receita, despesa e saldo do mês.
 - `v_category_breakdown(month)`.
 - `v_mrr` — soma de `monthly_value_cents` de leads `fechado` + `contract_status='ativo'`.
 - `v_habit_streaks` — streak atual e recorde por hábito.
@@ -231,18 +230,18 @@ Payload: `{ channel, text, client_ts }`. Resposta: `{ status, reply_text, action
 
 ### 5.2 Parser (Claude API com tool use)
 - Modelo de parsing: `claude-haiku-5-5` (rápido e barato). Fallback/retry com `claude-sonnet-5-5` se o JSON vier inválido.
-- System prompt inclui: data/hora atual em São Paulo, lista de categorias, hábitos ativos, leads vivos (nome + empresa + stage, máx. 50), timer aberto, regras de `scope`.
+- System prompt inclui: data/hora atual em São Paulo, lista de categorias, hábitos ativos, leads vivos (nome + empresa + stage, máx. 50), timer aberto.
 - Uma mensagem pode gerar várias ações ("gastei 40 de gasolina e fiz academia" = 2 ferramentas).
 - Se faltar dado essencial (valor, ou lead ambíguo), usar `ask_clarification` → status `needs_clarification`, e a próxima mensagem do mesmo canal em até 10 min é tratada como resposta.
 
 **Ferramentas:**
 | ferramenta | efeito |
 |---|---|
-| `add_transaction` | {kind, amount_cents, scope, category, description, counterparty?, occurred_on?, lead_ref?} |
+| `add_transaction` | {kind, amount_cents, category, description, counterparty?, occurred_on?, lead_ref?} |
 | `add_task` | {title, due_on?, moves_revenue?, goal_ref?, lead_ref?} |
 | `complete_task` | {task_ref} |
 | `log_habit` | {habit_ref, date?} |
-| `start_timer` / `stop_timer` | {label?, scope?} |
+| `start_timer` / `stop_timer` | {label?} |
 | `log_time` | {minutes, label, date?} |
 | `create_lead` | {name, business?, origin?, stage default 'abordado', next_action, next_action_on} |
 | `update_lead` | {lead_ref, stage?, next_action?, next_action_on?, lost_reason?, monthly_value_cents?, note?} |
@@ -251,11 +250,9 @@ Payload: `{ channel, text, client_ts }`. Resposta: `{ status, reply_text, action
 | `undo_last` | reverte a última `inbox_message` com status `ok` usando `result` |
 | `ask_clarification` | {question} |
 
-**Regras de scope:** receita de cliente, anúncio, ferramenta de trabalho (Claude, n8n, EasyPanel, domínio) → `arte`. Comida, combustível, roupa, lazer → `pessoal`. Na dúvida → `pessoal` e marca na resposta "(pessoal — responde 'é da ARTe' pra mudar)".
-
 **Resposta padrão (curta, WhatsApp):**
 ```
-✅ Receita R$ 1.500 · ARTe · Cliente X
+✅ Receita R$ 1.500 · Cliente X
 📈 Marco "R$ 10k/mês": R$ 6.200 → faltam R$ 3.800 (62%)
 ↩️ "desfaz" pra reverter
 ```
@@ -341,10 +338,10 @@ Desktop: sidebar fixa à esquerda + Ctrl/Cmd+K (command palette que também lan�
    - Follow-ups do dia / atrasados.
    - Princípio do dia (rotação de `principles`).
    - Timer (iniciar/parar, label).
-2. **Dinheiro** — extrato com filtros (mês, scope, categoria), edição inline, revisão de pendentes (`pending_review`); relatórios: receita × despesa do mês, ARTe × pessoal, categorias, evolução 12 meses (barras), receita ARTe acumulada (linha).
+2. **Dinheiro** — extrato com filtros (mês, categoria), edição inline, revisão de pendentes (`pending_review`); relatórios: receita × despesa do mês, categorias, evolução 12 meses (barras), receita acumulada (linha).
 3. **Marcos** — marco atual em destaque, fila dos próximos, **linha do tempo de conquistas** (cada marco batido com data e quanto tempo levou).
 4. **Objetivos** — por trimestre e área, com "por quê", métrica e tarefas vinculadas.
-5. **Rotina** (abas) — Tarefas (Hoje · Semana · Backlog) · Hábitos (heatmap de 12 semanas, streak atual/recorde) · Tempo (horas por dia/semana, por label, ARTe × pessoal).
+5. **Rotina** (abas) — Tarefas (Hoje · Semana · Backlog) · Hábitos (heatmap de 12 semanas, streak atual/recorde) · Tempo (horas por dia/semana, por label).
 6. **Pipeline** — kanban por etapa (arrastar no desktop, ação rápida no mobile), card com próxima ação e data; painel do funil reverso; taxas por etapa; motivos de perda (barras); origem dos leads que fecham.
 7. **Revisão** — fechamento do dia (vitória, aprendizado, energia, top 3 de amanhã — 60 segundos); revisão semanal com snapshot dos números da semana vs anterior.
 8. **Ajustes** — categorias, hábitos, princípios, metas diárias, taxas padrão do funil, horários de briefing, notificações, token da API, integrações.

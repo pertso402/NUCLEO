@@ -29,7 +29,7 @@
 - [ ] 1.4 Fixtures de parser (mín. 15 frases de dinheiro) + teste
 - [ ] 1.5 Tela **Comando** v1: anel do marco, ticker, faltam R$ X, barra de ritmo, projeção (Realtime atualiza ao lançar)
 - [ ] 1.6 `CaptureButton` (texto) + `CommandPalette` (Ctrl/Cmd+K) usando `/api/ingest`
-- [ ] 1.7 Tela **Dinheiro**: extrato, filtros (mês/scope/categoria), edição inline, relatórios do mês e 12 meses
+- [ ] 1.7 Tela **Dinheiro**: extrato, filtros (mês/categoria), edição inline, relatórios do mês e 12 meses
 - [ ] 1.8 Tela **Marcos**: criar/ordenar marcos, linha do tempo de conquistas, celebração ao bater
 - [ ] 1.9 Workflow n8n: Evolution → filtro de número → (áudio → ElevenLabs STT) → `/api/ingest` → resposta no WhatsApp. Exportar JSON para `integrations/n8n/`
 - [ ] 1.10 Resposta de receita sempre com o novo estado do marco (ARCHITECTURE §5.2)
@@ -63,7 +63,7 @@
 - [ ] 3.5 Meta de abordagens automática alimentando o Comando e o score
 - [ ] 3.6 Follow-ups no Comando + `/api/cron/followups`
 - [ ] 3.7 Análises: taxa por etapa, motivos de perda, origem que mais fecha
-- [ ] 3.8 Receita vinculada a lead (`lead_id`) e marco `mrr_arte`
+- [ ] 3.8 Receita vinculada a lead (`lead_id`) e marco `mrr`
 
 **Critérios de aceite:** não consigo salvar lead vivo sem próxima ação · o Comando mostra "hoje: N abordagens" calculado pelo funil · mover lead pra "fechado" atualiza MRR e o marco.
 
@@ -92,7 +92,7 @@
 
 ## Decisões tomadas
 - 2026-11-12 — PWA em vez de app nativo (iPhone sem custo de anuidade da Apple; reavaliar após 30 dias de uso diário).
-- 2026-11-12 — Pessoal e ARTe juntos, diferenciados por `scope` deduzido automaticamente.
+- ~~2026-11-12 — Pessoal e ARTe juntos, diferenciados por `scope`.~~ **Substituída:** não existe ARTe no NÚCLEO. O Peter é autônomo (serviços como PJ, sem CNPJ, sem planos de agência) e vê o app como 100% desenvolvimento pessoal: **um dinheiro só, sem `scope`**. Custo do trabalho sai das categorias. Métricas de marco: `revenue_month`, `revenue_cumulative`, `mrr`, `net_month`. Migration `20261112230000_remove_scope.sql`; ARCHITECTURE e DESIGN atualizados.
 - 2026-11-12 — Lógica de negócio no código; n8n apenas como ponte de WhatsApp/áudio e agendador.
 - 2026-11-12 — Dark-only, design system "Obsidiana Volt".
 - 2026-11-12 — Raiz do repositório = pasta `JARVIS` (equivale a `nucleo/` do ARCHITECTURE §3); docs renomeados de `CLAUDE (1).md`/`ARCHITECTURE (1).md` para os nomes canônicos.
@@ -104,15 +104,15 @@
 - 2026-11-12 — PWA com `@serwist/turbopack` (o `@serwist/next` exige webpack; Next 16 builda com Turbopack). SW servido por route handler em `/serwist/sw.js`, desligado em dev. `/api`, `/auth` e Supabase sempre `NetworkOnly`. Ícones gerados por `scripts/generate-icons.mjs` (N geométrico em paths, sem depender de fonte instalada).
 - 2026-11-12 — Banco: projeto Supabase **existente** do Peter (`tarulbqnnbqdrvwsphcw`), compartilhado com outros sistemas (schema `prospector`, `public.leads/conversas/mensagens`). Por isso funções e trigger do NÚCLEO levam prefixo `nucleo_` e a migration não semeia todos os `auth.users`. **Atenção fase 3:** `public.leads` já existe (outro sistema); o pipeline do NÚCLEO vai precisar de outro nome ou schema.
 - 2026-11-12 — Vercel: projeto `nucleo` (conta pertso402), produção em https://nucleo-beta.vercel.app. `vercel.json` fixa framework Next.js (o projeto criado pelo CLI veio como "Other" e só publicava `public/`) e região `gru1` (São Paulo, perto do Supabase sa-east). Node fixado em 24.x via `engines`. Variáveis em produção: URL e chave publicável do Supabase + `NUCLEO_OWNER_EMAIL`.
-- 2026-11-12 — Código em repositório privado https://github.com/pertso402/NUCLEO (branch `main`). CI do GitHub Actions roda em todo push. A Vercel ainda publica pelo CLI (`vercel deploy --prod`); conectar o repositório à Vercel para deploy automático fica como opção.
+- 2026-11-12 — Código em repositório privado https://github.com/pertso402/NUCLEO (branch `main`). CI do GitHub Actions roda em todo push, e a Vercel está conectada ao repositório: **todo push na `main` publica em produção** automaticamente.
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
 _(nenhum)_
 
 ## Configuração pendente com o Peter
-- [ ] Marco inicial (título, métrica, valor alvo)
-- [ ] Faturamento atual da ARTe (para o primeiro estado do marco)
+- [x] Marco inicial: **"R$ 10k de receita"** · métrica `revenue_month` · alvo R$ 10.000 (1.000.000 centavos) · período nov/2026, prazo 30/11/2026 (entra como seed na 1.1)
+- [ ] Receita que já entrou em nov/2026 (para o anel começar no lugar certo; vira lançamentos na 1.1)
 - [ ] Ticket médio de contrato e taxas de conversão estimadas
 - [ ] Lista de hábitos
 - [ ] Princípios diários
@@ -134,3 +134,4 @@ _(nenhum)_
 | 2026-11-12 | 0.8 (deploy ✓) | Publicado em https://nucleo-beta.vercel.app. Verificado: `/` e rotas protegidas → 307 para `/login`; `/login` 200; manifest, `/serwist/sw.js` (com `Service-Worker-Allowed: /`), ícones e splash 200; tela de login renderiza no mobile. Primeira publicação deu 404 (framework "Other"), corrigido com `vercel.json`. |
 | 2026-11-12 | 0.7 ✓ | Peter instalou pelo Safari no iPhone 11 Pro: abre em tela cheia, login ok. Critérios de aceite da Fase 0 conferidos: login no iPhone e no PC ✓ · app instalado em tela cheia ✓ · identidade visual na tela vazia ✓ · 48 testes passando (local) ✓. Pendente só o CI rodar no GitHub. |
 | 2026-11-12 | 0.8 ✓ · Fase 0 ✓ | Push para github.com/pertso402/NUCLEO; CI #1 (typecheck + lint + 48 testes) passou em 1m21s. Todos os critérios de aceite da Fase 0 conferidos. |
+| 2026-11-12 | pré-1.1 | Removida a separação arte/pessoal de tudo (código, banco via nova migration, ARCHITECTURE, DESIGN, PROGRESS); SQLs de limpeza já usados removidos do repo. Marco inicial definido: R$ 10k de receita em nov/2026. Vercel conectada ao GitHub. |
