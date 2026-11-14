@@ -351,6 +351,8 @@ Desktop: sidebar fixa à esquerda + Ctrl/Cmd+K (command palette que também lan�
 
 ## 8. Automações (Vercel Cron chama `/api/cron/*`)
 
+Agendamento em `vercel.json` (horários em UTC). As rotas aceitam `Authorization: Bearer CRON_SECRET` (Vercel Cron) ou `x-nucleo-token`; `?dry=1` só monta o texto. Números sempre do servidor; a OpenAI reescreve e o texto só vale se mantiver os fatos exatos (senão vai a versão de reserva, ver `lib/briefing/compose.ts`).
+
 | quando | endpoint | o que faz |
 |---|---|---|
 | dias úteis 07:30 | `briefing-manha` | WhatsApp: marco + ritmo, top 3 do dia, meta de abordagens, follow-ups, princípio do dia |

@@ -44,6 +44,7 @@ function fakeToday(empty: boolean): TodayData {
           { id: id(3), title: "Follow-up Mercado Bom Preço", due_on: "2026-11-16" },
         ],
     revenueDoneToday: input.revenueTasksDone,
+    revenuePlanned: input.revenueTasksPlanned,
     principle: empty ? null : { id: id(9), text: "Proposta enviada hoje vale mais que proposta perfeita semana que vem." },
   };
 }

@@ -1,4 +1,5 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { dayInstantRange, startOfWeek, todayISO, weekday, type ISODate } from "@/lib/dates";
 import { entryMinutes } from "@/lib/metrics/routine";
 import { computeScore, habitsForToday, principleOfDay, type DayScore } from "@/lib/metrics/score";
@@ -21,21 +22,42 @@ export interface TodayData {
   /** Até 3 tarefas abertas que mexem faturamento (atrasadas/hoje primeiro). */
   revenueTasks: RevenueTask[];
   revenueDoneToday: number;
+  /** Tarefas de faturamento com prazo até hoje (abertas + concluídas hoje). */
+  revenuePlanned: number;
   principle: { id: string; text: string } | null;
 }
 
-/** Tudo da faixa "Hoje" do Comando, com o score calculado na hora (ARCHITECTURE §6.2). */
-export async function loadToday(now: Date = new Date()): Promise<TodayData> {
-  const supabase = await createClient();
+/**
+ * Tudo da faixa "Hoje" do Comando, com o score calculado na hora (ARCHITECTURE §6.2).
+ * Sem `opts`: sessão do usuário. Com `opts` (cron, client admin, sem RLS): usa o `userId` dado.
+ * Toda consulta filtra por `user_id` explicitamente — vale para os dois casos.
+ */
+export async function loadToday(
+  now: Date = new Date(),
+  opts?: { supabase: SupabaseClient; userId: string },
+): Promise<TodayData> {
+  let supabase: SupabaseClient;
+  let userId: string;
+  if (opts) {
+    ({ supabase, userId } = opts);
+  } else {
+    supabase = await createClient();
+    const { data } = await supabase.auth.getClaims();
+    const sub = data?.claims?.sub;
+    if (!sub) throw new Error("Sem sessão");
+    userId = sub;
+  }
+
   const today = todayISO(now);
   const { from, to } = dayInstantRange(today);
   const weekStart = startOfWeek(today);
 
   const [settings, openRevenue, doneRevenue, entries, habits, logs, principles] = await Promise.all([
-    supabase.from("settings").select("workdays, daily_focus_minutes_goal").maybeSingle(),
+    supabase.from("settings").select("workdays, daily_focus_minutes_goal").eq("user_id", userId).maybeSingle(),
     supabase
       .from("tasks")
       .select("id, title, due_on")
+      .eq("user_id", userId)
       .eq("status", "todo")
       .eq("moves_revenue", true)
       .order("due_on", { ascending: true, nullsFirst: false })
@@ -44,6 +66,7 @@ export async function loadToday(now: Date = new Date()): Promise<TodayData> {
     supabase
       .from("tasks")
       .select("id, due_on")
+      .eq("user_id", userId)
       .eq("status", "done")
       .eq("moves_revenue", true)
       .gte("completed_at", from.toISOString())
@@ -51,12 +74,24 @@ export async function loadToday(now: Date = new Date()): Promise<TodayData> {
     supabase
       .from("time_entries")
       .select("started_at, ended_at, is_focus")
+      .eq("user_id", userId)
       .eq("is_focus", true)
       .gte("started_at", from.toISOString())
       .lt("started_at", to.toISOString()),
-    supabase.from("habits").select("id, target_per_week").eq("active", true),
-    supabase.from("habit_logs").select("habit_id, log_date").gte("log_date", weekStart).lte("log_date", today),
-    supabase.from("principles").select("id, text").eq("active", true).order("position").order("created_at"),
+    supabase.from("habits").select("id, target_per_week").eq("user_id", userId).eq("active", true),
+    supabase
+      .from("habit_logs")
+      .select("habit_id, log_date")
+      .eq("user_id", userId)
+      .gte("log_date", weekStart)
+      .lte("log_date", today),
+    supabase
+      .from("principles")
+      .select("id, text")
+      .eq("user_id", userId)
+      .eq("active", true)
+      .order("position")
+      .order("created_at"),
   ]);
 
   const workdays = (settings.data?.workdays as number[] | undefined) ?? [1, 2, 3, 4, 5];
@@ -107,6 +142,7 @@ export async function loadToday(now: Date = new Date()): Promise<TodayData> {
     habitsDone: hab.done,
     revenueTasks: open.slice(0, 3),
     revenueDoneToday: done.length,
+    revenuePlanned: plannedOpen + plannedDone,
     principle: principleOfDay((principles.data ?? []) as { id: string; text: string }[], today),
   };
 }
