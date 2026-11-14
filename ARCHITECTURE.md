@@ -33,27 +33,28 @@ Usuário único e **um dinheiro só**: o Peter trabalha como autônomo (serviço
     │ POST  │ GET      │                           │
     ▼       ▼          ▼                           ▼
  ┌──────────────────────────────┐    ┌──────────────────────────────┐
- │ Next.js na Vercel             │◄───│ n8n (EasyPanel)               │
- │  /api/ingest  (texto→ação)    │    │  • Evolution webhook → áudio? │
- │  /api/ingest/audio            │    │    → ElevenLabs STT → /ingest │
- │  /api/widget                  │    │  • Responde no WhatsApp       │
- │  /api/cron/* (briefings)      │    │  • Schedules → /api/cron/*    │
- │  App (RSC + client)           │    └──────────────┬───────────────┘
- └──────────────┬───────────────┘                   │
-                │                                   ▼
-                ▼                         ┌──────────────────┐
- ┌──────────────────────────────┐        │ Evolution API     │
- │ Supabase                      │        │ (WhatsApp)        │
- │  Postgres + RLS + Views       │        └──────────────────┘
+ │ Next.js na Vercel             │◄──────── webhook ─────┐
+ │  /api/whatsapp (Evolution)    │──── sendText ───────┐ │
+ │  /api/ingest  (texto→ação)    │                     ▼ │
+ │  /api/ingest/audio            │          ┌──────────────────┐
+ │  /api/widget                  │          │ Evolution API     │
+ │  /api/cron/* ← Vercel Cron    │          │ (WhatsApp)        │
+ │  App (RSC + client)           │          └──────────────────┘
+ └──────────────┬───────────────┘
+                ▼
+ ┌──────────────────────────────┐
+ │ Supabase                      │
+ │  Postgres + RLS + Views       │
  │  Auth (e-mail OTP)            │
  │  Realtime (atualiza a tela)   │        ┌──────────────────┐
  └──────────────────────────────┘        │ OpenAI API        │◄── parsing + briefings
-                                          │ ElevenLabs STT    │◄── áudio
+                                          │ STT (ElevenLabs   │◄── áudio
+                                          │  ou OpenAI)       │
                                           │ Pluggy (fase 4)   │◄── Open Finance
                                           └──────────────────┘
 ```
 
-**Regra:** toda lógica de negócio vive no código (Next.js + SQL). O n8n é só ponte (WhatsApp/áudio) e relógio (agendamentos).
+**Regra:** tudo vive no código (Next.js + SQL), sem n8n. A Evolution chama `/api/whatsapp` direto; os agendamentos são Vercel Cron chamando `/api/cron/*`.
 
 ---
 
@@ -93,10 +94,10 @@ nucleo/
 │  ├─ metrics/ (pace.ts, funnel.ts, score.ts, business-days.ts)
 │  ├─ money.ts
 │  ├─ dates.ts                    # tudo em America/Sao_Paulo
-│  └─ evolution.ts                # envio de mensagem WhatsApp
+│  └─ whatsapp/                   # webhook da Evolution, envio, transcrição (STT)
 ├─ supabase/migrations/
 ├─ integrations/
-│  ├─ n8n/                        # JSON dos workflows exportados
+│  ├─ whatsapp/README.md          # como ligar a Evolution ao app
 │  ├─ scriptable/nucleo-widget.js
 │  └─ siri/README.md              # passo a passo do Atalho
 ├─ tests/ (unit + e2e)
@@ -220,8 +221,8 @@ Seed: Receita de cliente, Setup/implantação, Outras receitas · Alimentação,
 ### 5.1 Entradas
 | Canal | Caminho |
 |---|---|
-| WhatsApp texto | Evolution → webhook n8n → valida número = `settings.whatsapp_number` → POST `/api/ingest` → n8n responde com `reply_text` via Evolution |
-| WhatsApp áudio | igual, mas n8n baixa o áudio → ElevenLabs STT (pt) → texto → `/api/ingest` |
+| WhatsApp texto | Evolution → webhook `/api/whatsapp` (responde 200 na hora) → valida número = `PETER_WHATSAPP_NUMBER` → mesmo pipeline do `/api/ingest` (`runIngest`) → `reply_text` volta via Evolution `sendText` |
+| WhatsApp áudio | igual, mas o áudio (base64 no webhook ou baixado da Evolution) passa pelo STT (ElevenLabs se houver chave, senão OpenAI) → texto → pipeline; a resposta ecoa a transcrição |
 | Siri | Atalho iOS: "Ditar texto" → POST `/api/ingest` `{channel:'siri', text}` → mostra `reply_text` |
 | App (botão de captura) | grava áudio (MediaRecorder) → `/api/ingest/audio` (STT server-side) ou texto → `/api/ingest` |
 | Desktop | Command palette (Ctrl/Cmd+K) → `/api/ingest` |
@@ -260,7 +261,7 @@ Toda receita responde com o novo estado do marco. Esse é o reforço positivo.
 
 ### 5.3 Segurança
 - `x-nucleo-token` em todos os endpoints de captura/cron/widget.
-- n8n descarta mensagens de qualquer número que não seja o do Peter.
+- `/api/whatsapp` descarta mensagens de qualquer número que não seja o do Peter (e grupos, status, reenvios com mais de 5 min, as próprias respostas).
 - Rate limit simples (30 req/min) em `/api/ingest`.
 - `inbox_messages` guarda tudo por 180 dias.
 
@@ -348,7 +349,7 @@ Desktop: sidebar fixa à esquerda + Ctrl/Cmd+K (command palette que também lan�
 
 ---
 
-## 8. Automações (n8n chama `/api/cron/*`)
+## 8. Automações (Vercel Cron chama `/api/cron/*`)
 
 | quando | endpoint | o que faz |
 |---|---|---|
@@ -375,7 +376,7 @@ Push (Web Push/VAPID) espelha os briefings quando a PWA estiver instalada; Whats
 ## 10. Open Finance (fase 4)
 
 - Via **Meu Pluggy** (acesso gratuito aos dados do próprio CPF). Ler a documentação atual da Pluggy antes de implementar.
-- Sync diário (n8n 06:00 → `/api/cron/openfinance-sync`): busca transações novas, grava com `source='openfinance'`, `status='pending_review'`, `external_id` para dedupe.
+- Sync diário (Vercel Cron 06:00 → `/api/cron/openfinance-sync`): busca transações novas, grava com `source='openfinance'`, `status='pending_review'`, `external_id` para dedupe.
 - **Conciliação**: se já existir lançamento manual com mesmo valor ± 1 dia, vincula em vez de duplicar.
 - Categorização sugerida pelo parser; Peter confirma em lote na tela Dinheiro.
 - Consentimento expira em 12 meses: guardar `consent_expires_at` e avisar 15 dias antes.

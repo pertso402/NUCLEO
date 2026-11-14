@@ -16,7 +16,7 @@ const Body = z.object({
 });
 
 /**
- * Autoriza por `x-nucleo-token` (WhatsApp/n8n, Siri) OU pela sessão do dono (botão de captura e
+ * Autoriza por `x-nucleo-token` (Siri e integrações) OU pela sessão do dono (botão de captura e
  * command palette dentro do app, onde o token não pode ir para o navegador).
  */
 async function authorize(request: NextRequest): Promise<boolean> {
