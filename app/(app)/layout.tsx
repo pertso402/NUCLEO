@@ -16,7 +16,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <GridBackground />
       {/* Um ouvinte só para o app inteiro: mudou lançamento/marco (WhatsApp, Siri, app), a tela atualiza
           e o cache das outras abas é descartado. Trocar de aba sem mudança usa o cache (instantâneo). */}
-      <RealtimeRefresh tables={["transactions", "milestones"]} />
+      <RealtimeRefresh tables={["transactions", "milestones", "tasks", "habit_logs", "time_entries"]} />
       <Sidebar />
       <div className="pt-safe lg:pl-60">
         <main className="mx-auto w-full max-w-content px-4 pt-6 pb-32 lg:px-8 lg:pb-12">

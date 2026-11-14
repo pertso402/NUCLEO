@@ -1,11 +1,14 @@
 import type { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
-type Variant = "primary" | "secondary" | "ghost";
+/** focus = ação de tempo/foco (Plasma, DESIGN §2); o resto da paleta de sinais não vira botão. */
+type Variant = "primary" | "focus" | "secondary" | "ghost";
 
 const variants: Record<Variant, string> = {
   primary:
     "bg-volt text-bg-0 shadow-[0_0_10px_rgba(200,255,46,0.35)] hover:shadow-glow-volt disabled:shadow-none",
+  focus:
+    "bg-plasma text-text-0 shadow-[0_0_10px_rgba(124,92,255,0.45)] hover:shadow-glow-plasma disabled:shadow-none",
   secondary: "bg-white/[0.05] text-text-0 border border-line-strong hover:border-text-2 hover:bg-white/[0.08]",
   ghost: "bg-transparent text-text-1 hover:text-text-0",
 };
