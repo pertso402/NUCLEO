@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowUp, LoaderCircle, X } from "lucide-react";
+import { ArrowUp, LoaderCircle, Mic, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { Exchange } from "./CaptureProvider";
 import { ReplyView } from "./ReplyView";
@@ -88,7 +88,10 @@ export function CommandPalette({
               <div ref={listRef} className="flex max-h-[45vh] flex-col gap-4 overflow-y-auto px-4 pt-3">
                 {exchanges.map((x) => (
                   <div key={x.id} className="flex flex-col gap-2">
-                    <p className="num text-sm text-text-2">› {x.text}</p>
+                    <p className="num flex items-start gap-1.5 text-sm text-text-2">
+                      {x.kind === "audio" ? <Mic size={14} strokeWidth={1.75} className="mt-0.5 shrink-0" aria-label="Áudio" /> : <span aria-hidden>›</span>}
+                      <span className="min-w-0">{x.text}</span>
+                    </p>
                     {x.status === "pending" ? (
                       <p className="flex items-center gap-2 text-sm text-text-2">
                         <LoaderCircle size={16} strokeWidth={1.5} className="animate-spin text-volt" />

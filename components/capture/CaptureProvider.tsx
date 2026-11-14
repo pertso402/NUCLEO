@@ -11,10 +11,16 @@ export interface Exchange {
   text: string;
   status: "pending" | "ok" | "needs_clarification" | "error";
   reply: string | null;
+  /** "audio": veio do botão de gravar (o texto é a transcrição). */
+  kind?: "text" | "audio";
 }
 
 interface CaptureContextValue {
   open: (channel: CaptureChannel) => void;
+  /** Envia um áudio gravado no botão (abre a palette para mostrar a resposta). */
+  sendAudio: (audio: Blob) => void;
+  /** Mostra um aviso na palette (ex.: microfone bloqueado). */
+  notify: (reply: string) => void;
 }
 
 const CaptureContext = createContext<CaptureContextValue | null>(null);
@@ -80,7 +86,38 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
     [channel, router],
   );
 
-  const value = useMemo(() => ({ open }), [open]);
+  const sendAudio = useCallback(
+    async (audio: Blob) => {
+      const id = nextId++;
+      setChannel("app");
+      setExchanges((xs) => [...xs.slice(-9), { id, text: "Transcrevendo…", status: "pending", reply: null, kind: "audio" }]);
+      const update = (patch: Partial<Exchange>) =>
+        setExchanges((xs) => xs.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+      try {
+        const form = new FormData();
+        form.append("audio", audio, audio.type.includes("mp4") ? "audio.m4a" : "audio.webm");
+        const res = await fetch("/api/ingest/audio", { method: "POST", body: form });
+        const data = (await res.json()) as { status?: Exchange["status"]; reply_text?: string; transcript?: string | null };
+        update({
+          text: data.transcript || "(áudio)",
+          status: data.status ?? (res.ok ? "ok" : "error"),
+          reply: data.reply_text ?? "⚠️ Resposta inesperada do servidor.",
+        });
+        if (res.ok) router.refresh();
+      } catch {
+        update({ text: "(áudio)", status: "error", reply: "⚠️ Sem conexão. Tenta de novo." });
+      }
+    },
+    [router],
+  );
+
+  const notify = useCallback((reply: string) => {
+    const id = nextId++;
+    setChannel("app");
+    setExchanges((xs) => [...xs.slice(-9), { id, text: "(áudio)", status: "error", reply, kind: "audio" }]);
+  }, []);
+
+  const value = useMemo(() => ({ open, sendAudio, notify }), [open, sendAudio, notify]);
 
   return (
     <CaptureContext.Provider value={value}>

@@ -1,10 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { isValidApiToken } from "@/lib/api-auth";
 import { rateLimit } from "@/lib/rate-limit";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { resolveOwnerId, runIngest } from "@/lib/ingest/run";
+import { authorizeIngest } from "@/lib/ingest/authorize";
+import { runIngest } from "@/lib/ingest/run";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -15,19 +13,8 @@ const Body = z.object({
   client_ts: z.string().optional(),
 });
 
-/**
- * Autoriza por `x-nucleo-token` (Siri e integrações) OU pela sessão do dono (botão de captura e
- * command palette dentro do app, onde o token não pode ir para o navegador).
- */
-async function authorize(request: NextRequest): Promise<boolean> {
-  if (isValidApiToken(request.headers.get("x-nucleo-token"))) return true;
-  const { data } = await (await createClient()).auth.getUser();
-  if (!data.user) return false;
-  return data.user.id === (await resolveOwnerId(createAdminClient()));
-}
-
 export async function POST(request: NextRequest) {
-  if (!(await authorize(request))) {
+  if (!(await authorizeIngest(request))) {
     // reply_text em todo erro: o Atalho da Siri mostra/fala sempre esse campo.
     return NextResponse.json(
       { error: "não autorizado", status: "error", reply_text: "Token inválido. Confira o token no Atalho." },

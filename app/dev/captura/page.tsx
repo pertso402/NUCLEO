@@ -1,40 +1,23 @@
-"use client";
-
-import { useState } from "react";
+import { notFound } from "next/navigation";
+import { CaptureButton } from "@/components/capture/CaptureButton";
+import { CaptureProvider } from "@/components/capture/CaptureProvider";
 import { GridBackground } from "@/components/hud/GridBackground";
-import { CommandPalette } from "@/components/capture/CommandPalette";
-import type { Exchange } from "@/components/capture/CaptureProvider";
 
-/** Vitrine de desenvolvimento da captura (só em `next dev`; o proxy não deixa abrir em produção). */
-const SAMPLE: Exchange[] = [
-  {
-    id: 1,
-    text: "recebi 1500 da pizzaria",
-    status: "ok",
-    reply: '✅ Receita R$ 1.500 · Receita de cliente · pizzaria\n📈 Marco "R$ 10k de receita": R$ 1.500 → faltam R$ 8.500 (15%)\n↩️ "desfaz" pra reverter',
-  },
-  { id: 2, text: "gastei no mercado", status: "needs_clarification", reply: "❓ Qual foi o valor do mercado?" },
-  { id: 3, text: "quanto tá o mês?", status: "ok", reply: "📊 novembro: receita R$ 1.500 · despesa R$ 85 · saldo R$ 1.415" },
-  { id: 4, text: "desfaz", status: "pending", reply: null },
-];
-
+/**
+ * Vitrine do botão de captura (404 em produção): toque abre o texto, segurar grava.
+ * Sem login o envio volta "Sessão expirada" — serve para testar o gesto sem gravar nada.
+ */
 export default function DevCapturaPage() {
-  const [exchanges, setExchanges] = useState(SAMPLE);
-  const [open, setOpen] = useState(true);
+  if (process.env.NODE_ENV === "production") notFound();
   return (
-    <>
+    <CaptureProvider>
       <GridBackground />
-      <main className="p-6">
-        <button className="text-sm text-volt underline" onClick={() => setOpen(true)}>
-          abrir palette
-        </button>
+      <main className="mx-auto max-w-content px-4 pt-6">
+        <p className="label-instrument">Vitrine</p>
+        <h1 className="font-display text-xl font-semibold text-text-0">Botão de captura</h1>
+        <p className="mt-2 text-sm text-text-1">Toque: campo de texto. Segure: grava; solte: envia; arraste pra fora: cancela.</p>
       </main>
-      <CommandPalette
-        open={open}
-        onClose={() => setOpen(false)}
-        exchanges={exchanges}
-        onSend={(text) => setExchanges((xs) => [...xs, { id: xs.length + 1, text, status: "ok", reply: `✅ Despesa R$ 40 · Alimentação · ${text}\n↩️ "desfaz" pra reverter` }])}
-      />
-    </>
+      <CaptureButton />
+    </CaptureProvider>
   );
 }
