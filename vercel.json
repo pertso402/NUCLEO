@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/revisao-semanal",
       "schedule": "0 21 * * 0"
+    },
+    {
+      "path": "/api/cron/recorrentes",
+      "schedule": "0 9 * * *"
     }
   ]
 }

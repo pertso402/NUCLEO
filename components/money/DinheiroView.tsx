@@ -5,6 +5,7 @@ import { Money } from "@/components/hud/Money";
 import { CategoryBars } from "@/components/money/CategoryBars";
 import { CumulativeChart } from "@/components/money/CumulativeChart";
 import { MonthlyBarsChart } from "@/components/money/MonthlyBarsChart";
+import { RecurringRules } from "@/components/money/RecurringRules";
 import { Statement } from "@/components/money/Statement";
 import { StatementFilters } from "@/components/money/StatementFilters";
 import { Chip } from "@/components/ui/Chip";
@@ -184,6 +185,11 @@ export function DinheiroView({
       >
         <MonthlyBarsChart series={data.series} selected={month} />
       </HudCard>
+
+      {/* Recorrentes */}
+      <div className="lg:col-span-5 lg:col-start-8 lg:row-start-6">
+        <RecurringRules rules={data.rules} categories={data.categories} />
+      </div>
     </div>
   );
 }

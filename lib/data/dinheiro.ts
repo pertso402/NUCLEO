@@ -2,6 +2,7 @@ import "server-only";
 import { addMonths, endOfMonth, startOfMonth, type ISODate } from "@/lib/dates";
 import { lastMonthsSeries, type MonthTotals, type MoneyKind, type TxStatus } from "@/lib/metrics/money-report";
 import { toCents, type Cents } from "@/lib/money";
+import { RULE_COLS, type RecurringRule } from "@/lib/recurring";
 import { createClient } from "@/lib/supabase/server";
 
 export interface CategoryOption {
@@ -30,6 +31,8 @@ export interface DinheiroData {
   series: MonthTotals[];
   /** Marco de receita do mês (ativo, `revenue_month`) para a linha de meta no gráfico acumulado. */
   monthTarget: { title: string; targetCents: Cents } | null;
+  /** Regras de lançamento recorrente (ativas e pausadas). */
+  rules: RecurringRule[];
 }
 
 /** Dados da tela Dinheiro para o usuário logado (RLS filtra). */
@@ -38,7 +41,7 @@ export async function loadDinheiro(month: ISODate): Promise<DinheiroData> {
   const start = startOfMonth(month);
   const end = endOfMonth(month);
 
-  const [cats, txs, totals, ms] = await Promise.all([
+  const [cats, txs, totals, ms, rules] = await Promise.all([
     supabase.from("categories").select("id, name, kind").eq("archived", false).order("name"),
     supabase
       .from("transactions")
@@ -59,8 +62,9 @@ export async function loadDinheiro(month: ISODate): Promise<DinheiroData> {
       .eq("status", "active")
       .eq("metric", "revenue_month")
       .order("position", { ascending: true }),
+    supabase.from("recurring_rules").select(RULE_COLS).order("day_of_month").order("description"),
   ]);
-  for (const r of [cats, txs, totals, ms]) {
+  for (const r of [cats, txs, totals, ms, rules]) {
     if (r.error) throw new Error(`Falha ao ler dados de Dinheiro: ${r.error.message}`);
   }
 
@@ -69,6 +73,7 @@ export async function loadDinheiro(month: ISODate): Promise<DinheiroData> {
     transactions: (txs.data ?? []).map((t) => ({ ...t, amount_cents: toCents(t.amount_cents) }) as Transaction),
     series: lastMonthsSeries(totals.data ?? [], start),
     monthTarget: pickMonthTarget(ms.data ?? [], start, end),
+    rules: (rules.data ?? []).map((r) => ({ ...r, amount_cents: toCents(r.amount_cents) }) as RecurringRule),
   };
 }
 

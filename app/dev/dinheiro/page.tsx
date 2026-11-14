@@ -71,6 +71,11 @@ const data: DinheiroData = {
   transactions,
   series,
   monthTarget: { title: "R$ 10k de receita", targetCents: 1_000_000 },
+  rules: [
+    { id: id(201), description: "Aluguel", amount_cents: 120_000, kind: "expense", category_id: id(6), day_of_month: 5, active: true, lead_id: null, last_generated_on: "2026-11-05" },
+    { id: id(202), description: "Mensalidade Choppatinhas", amount_cents: 80_000, kind: "income", category_id: id(1), day_of_month: 10, active: true, lead_id: null, last_generated_on: "2026-11-10" },
+    { id: id(203), description: "ChatGPT", amount_cents: 9_900, kind: "expense", category_id: id(5), day_of_month: 31, active: false, lead_id: null, last_generated_on: null },
+  ],
 };
 
 export default async function DevDinheiroPage(props: PageProps<"/dev/dinheiro">) {

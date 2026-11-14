@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { parseISODate } from "@/lib/dates";
+import { parseISODate, todayISO } from "@/lib/dates";
+import { initialLastGenerated } from "@/lib/metrics/recurring";
 import { parseBRL } from "@/lib/money";
 import { syncAchievements } from "@/lib/data/milestone";
 import { createClient } from "@/lib/supabase/server";
@@ -93,4 +94,78 @@ export async function deleteTransaction(txId: string): Promise<ActionResult> {
   const { error } = await supabase.from("transactions").delete().eq("id", txId);
   if (error) return { ok: false, error: "Não foi possível excluir." };
   return done(supabase);
+}
+
+// ------------------------------------------------------------------ recorrentes (2.11)
+
+const RuleSchema = z.object({
+  description: z.string().trim().min(1, "Dê um nome (ex.: Aluguel).").max(120),
+  amount: z.string().trim().min(1).max(40),
+  kind: z.enum(["income", "expense"]),
+  category_id: id.nullable(),
+  day_of_month: z.number().int().min(1).max(31),
+});
+export type RecurringRuleInput = z.input<typeof RuleSchema>;
+
+function ruleRow(r: z.output<typeof RuleSchema>) {
+  const cents = parseBRL(r.amount);
+  if (cents === null || cents <= 0) return null;
+  return { description: r.description, amount_cents: cents, kind: r.kind, category_id: r.category_id, day_of_month: r.day_of_month };
+}
+
+/** Cria uma regra. Se o dia já passou neste mês, começa no próximo (este mês você já lançou). */
+export async function createRecurringRule(input: RecurringRuleInput): Promise<ActionResult> {
+  const parsed = RuleSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  const row = ruleRow(parsed.data);
+  if (!row) return { ok: false, error: "Valor inválido." };
+  const supabase = await authed();
+  if (!supabase) return { ok: false, error: "Sessão expirada. Entre de novo." };
+  const { error } = await supabase
+    .from("recurring_rules")
+    .insert({ ...row, last_generated_on: initialLastGenerated(row.day_of_month, todayISO()) });
+  if (error) return { ok: false, error: "Não deu para salvar a recorrência." };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function updateRecurringRule(ruleId: string, input: RecurringRuleInput): Promise<ActionResult> {
+  const parsed = RuleSchema.safeParse(input);
+  if (!id.safeParse(ruleId).success || !parsed.success) return { ok: false, error: "Dados inválidos." };
+  const row = ruleRow(parsed.data);
+  if (!row) return { ok: false, error: "Valor inválido." };
+  const supabase = await authed();
+  if (!supabase) return { ok: false, error: "Sessão expirada. Entre de novo." };
+  const { error } = await supabase.from("recurring_rules").update(row).eq("id", ruleId);
+  if (error) return { ok: false, error: "Não deu para salvar a recorrência." };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Pausa ou retoma. Ao retomar, não gera vencimentos que passaram enquanto estava pausada. */
+export async function setRecurringRuleActive(ruleId: string, active: boolean): Promise<ActionResult> {
+  if (!id.safeParse(ruleId).success) return { ok: false, error: "Dados inválidos." };
+  const supabase = await authed();
+  if (!supabase) return { ok: false, error: "Sessão expirada. Entre de novo." };
+  let patch: Record<string, unknown> = { active };
+  if (active) {
+    const { data } = await supabase.from("recurring_rules").select("day_of_month, last_generated_on").eq("id", ruleId).maybeSingle();
+    const skip = data ? initialLastGenerated(Number(data.day_of_month), todayISO()) : null;
+    if (skip && (!data?.last_generated_on || String(data.last_generated_on) < skip)) patch = { active, last_generated_on: skip };
+  }
+  const { error } = await supabase.from("recurring_rules").update(patch).eq("id", ruleId);
+  if (error) return { ok: false, error: "Não deu para mudar a recorrência." };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Exclui a regra (os lançamentos já gerados ficam). */
+export async function deleteRecurringRule(ruleId: string): Promise<ActionResult> {
+  if (!id.safeParse(ruleId).success) return { ok: false, error: "Dados inválidos." };
+  const supabase = await authed();
+  if (!supabase) return { ok: false, error: "Sessão expirada. Entre de novo." };
+  const { error } = await supabase.from("recurring_rules").delete().eq("id", ruleId);
+  if (error) return { ok: false, error: "Não deu para excluir a recorrência." };
+  revalidatePath("/", "layout");
+  return { ok: true };
 }
