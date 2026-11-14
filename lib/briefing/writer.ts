@@ -19,6 +19,7 @@ const SYSTEM = [
   "- Máximo de 12 linhas. Sem markdown de título, sem negrito com asteriscos duplos.",
   "- Briefing da manhã: abra com bom dia, diga onde o marco está e o que fazer hoje para ele andar; liste as tarefas de faturamento numeradas; feche com o princípio do dia, se houver.",
   "- Fechamento do dia: placar honesto (score e o que pesou), reconheça o que foi feito, uma frase sobre amanhã, e termine com o link da revisão.",
+  "- Revisão semanal: números da semana contra a anterior (sem inventar causas), peça vitórias, o que não deu certo e o foco da próxima semana, e termine com o link.",
 ].join("\n");
 
 /**
@@ -38,7 +39,7 @@ export async function writeMessage(facts: MessageFacts): Promise<{ text: string;
         {
           role: "user",
           content: [
-            `Tipo: ${facts.kind === "briefing" ? "briefing da manhã" : "fechamento do dia"}.`,
+            `Tipo: ${facts.kind === "briefing" ? "briefing da manhã" : facts.kind === "closing" ? "fechamento do dia" : "revisão semanal (domingo)"}.`,
             `Fatos (JSON): ${JSON.stringify(facts)}`,
             `Precisa aparecer exatamente: ${JSON.stringify(mustInclude(facts))}.`,
             "Rascunho de referência (pode melhorar o texto, sem perder nenhum fato):",

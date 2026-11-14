@@ -4,7 +4,9 @@ import { loadHighlightMilestone, type HighlightMilestone } from "@/lib/data/mile
 import { loadToday } from "@/lib/data/today";
 import { addDays, formatLongDate, startOfWeek, todayISO, weekday } from "@/lib/dates";
 import { formatBRL, toCents } from "@/lib/money";
-import type { BriefingFacts, ClosingFacts, MilestoneFacts } from "./compose";
+import { loadWeekNumbers } from "@/lib/data/review";
+import { weekLabel } from "@/lib/metrics/week";
+import type { BriefingFacts, ClosingFacts, MilestoneFacts, WeeklyFacts } from "./compose";
 
 const brl = (c: number) => formatBRL(c, { cents: false });
 
@@ -106,4 +108,32 @@ export async function loadClosingFacts({ supabase, userId, now }: Ctx, reviewUrl
     tomorrowCount: tomorrowTasks.count ?? 0,
     reviewUrl,
   };
+}
+
+/** Fatos da revisão semanal (semana seg–dom que contém `now`) e os números para o snapshot. */
+export async function loadWeeklyFacts({ supabase, userId, now }: Ctx, reviewUrl: string) {
+  const weekStart = startOfWeek(todayISO(now));
+  const [highlight, cur, prev] = await Promise.all([
+    loadHighlightMilestone(supabase, { userId, now }),
+    loadWeekNumbers({ supabase, userId }, weekStart, now),
+    loadWeekNumbers({ supabase, userId }, addDays(weekStart, -7), now),
+  ]);
+  const facts: WeeklyFacts = {
+    kind: "weekly",
+    weekLabel: weekLabel(weekStart),
+    income: brl(cur.incomeCents),
+    incomePrev: brl(prev.incomeCents),
+    expense: brl(cur.expenseCents),
+    net: brl(cur.netCents),
+    focus: fmtMinutes(cur.focusMinutes),
+    focusPrev: fmtMinutes(prev.focusMinutes),
+    revenueTasksDone: cur.revenueTasksDone,
+    revenueTasksPrev: prev.revenueTasksDone,
+    habits: cur.habitsTarget ? `${cur.habitsDone}/${cur.habitsTarget}` : "",
+    avgScore: cur.avgScore,
+    avgScorePrev: prev.avgScore,
+    milestone: milestoneFacts(highlight),
+    reviewUrl,
+  };
+  return { facts, weekStart, numbers: cur };
 }

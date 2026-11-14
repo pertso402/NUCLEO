@@ -1,9 +1,21 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "regions": ["gru1"],
+  "regions": [
+    "gru1"
+  ],
   "crons": [
-    { "path": "/api/cron/briefing-manha", "schedule": "30 10 * * 1-5" },
-    { "path": "/api/cron/fechamento-dia", "schedule": "30 0 * * *" }
+    {
+      "path": "/api/cron/briefing-manha",
+      "schedule": "30 10 * * 1-5"
+    },
+    {
+      "path": "/api/cron/fechamento-dia",
+      "schedule": "30 0 * * *"
+    },
+    {
+      "path": "/api/cron/revisao-semanal",
+      "schedule": "0 21 * * 0"
+    }
   ]
 }

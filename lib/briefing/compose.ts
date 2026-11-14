@@ -51,7 +51,27 @@ export interface ClosingFacts {
   reviewUrl: string;
 }
 
-export type MessageFacts = BriefingFacts | ClosingFacts;
+export interface WeeklyFacts {
+  kind: "weekly";
+  /** "09/11 – 15/11" */
+  weekLabel: string;
+  income: string;
+  incomePrev: string;
+  expense: string;
+  net: string;
+  focus: string;
+  focusPrev: string;
+  revenueTasksDone: number;
+  revenueTasksPrev: number;
+  /** "18/24" ou "" se não há hábitos. */
+  habits: string;
+  avgScore: number | null;
+  avgScorePrev: number | null;
+  milestone: MilestoneFacts | null;
+  reviewUrl: string;
+}
+
+export type MessageFacts = BriefingFacts | ClosingFacts | WeeklyFacts;
 
 function milestoneLines(m: MilestoneFacts): string[] {
   if (m.achieved) return [`🏆 Marco "${m.title}" batido: ${m.current} de ${m.target}.`];
@@ -91,8 +111,21 @@ export function fallbackClosing(f: ClosingFacts): string {
   return lines.join("\n");
 }
 
+export function fallbackWeekly(f: WeeklyFacts): string {
+  const lines = [`📅 Semana ${f.weekLabel}`, ""];
+  lines.push(`💰 Receita: ${f.income} (semana anterior: ${f.incomePrev})`);
+  lines.push(`💸 Despesa: ${f.expense} · saldo ${f.net}`);
+  lines.push(`⏱️ Foco: ${f.focus} (antes: ${f.focusPrev})`);
+  lines.push(`✅ Tarefas de faturamento: ${f.revenueTasksDone} (antes: ${f.revenueTasksPrev})`);
+  if (f.habits) lines.push(`🔁 Hábitos: ${f.habits}`);
+  if (f.avgScore !== null) lines.push(`📊 Score médio: ${f.avgScore}${f.avgScorePrev !== null ? ` (antes: ${f.avgScorePrev})` : ""}`);
+  if (f.milestone) lines.push("", ...milestoneLines(f.milestone));
+  lines.push("", "Fecha a semana: vitórias, o que não deu certo e o foco da próxima.", `Revisão semanal: ${f.reviewUrl}`);
+  return lines.join("\n");
+}
+
 export function fallbackMessage(f: MessageFacts): string {
-  return f.kind === "briefing" ? fallbackBriefing(f) : fallbackClosing(f);
+  return f.kind === "briefing" ? fallbackBriefing(f) : f.kind === "closing" ? fallbackClosing(f) : fallbackWeekly(f);
 }
 
 /** Trechos que o texto final precisa conter, exatamente. */
@@ -105,9 +138,11 @@ export function mustInclude(f: MessageFacts): string[] {
   if (f.kind === "briefing") {
     // títulos sem o prazo entre parênteses
     out.push(...f.revenueTasks.map((t) => t.replace(/\s*\([^)]*\)$/, "")));
-  } else {
+  } else if (f.kind === "closing") {
     out.push(`${f.score}`, f.reviewUrl);
     if (f.incomeToday) out.push(f.incomeToday);
+  } else {
+    out.push(f.income, f.reviewUrl);
   }
   return out;
 }

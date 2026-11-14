@@ -9,10 +9,12 @@ import {
   acceptGenerated,
   fallbackBriefing,
   fallbackClosing,
+  fallbackWeekly,
   mustInclude,
   type BriefingFacts,
   type ClosingFacts,
   type MilestoneFacts,
+  type WeeklyFacts,
 } from "@/lib/briefing/compose";
 import { dueText, fmtMinutes, milestoneFacts } from "@/lib/briefing/facts";
 import { computePace } from "@/lib/metrics/pace";
@@ -96,6 +98,46 @@ describe("mensagens de reserva (sem IA)", () => {
     expect(t).toContain("✅ Entrou hoje: R$ 1.500");
     expect(t).toContain("📋 Amanhã: 2 tarefas com prazo.");
     expect(t.endsWith("Revisão rápida (60s): https://nucleo-beta.vercel.app/revisao")).toBe(true);
+  });
+});
+
+describe("revisão semanal", () => {
+  const W: WeeklyFacts = {
+    kind: "weekly",
+    weekLabel: "09/11 – 15/11",
+    income: "R$ 2.300",
+    incomePrev: "R$ 800",
+    expense: "R$ 420",
+    net: "R$ 1.880",
+    focus: "12h30",
+    focusPrev: "9h",
+    revenueTasksDone: 5,
+    revenueTasksPrev: 3,
+    habits: "18/24",
+    avgScore: 62,
+    avgScorePrev: null,
+    milestone: null,
+    reviewUrl: "https://nucleo-beta.vercel.app/revisao?aba=semana",
+  };
+  it("texto de reserva compara com a semana anterior e pede a revisão", () => {
+    expect(fallbackWeekly(W)).toBe(
+      [
+        "📅 Semana 09/11 – 15/11",
+        "",
+        "💰 Receita: R$ 2.300 (semana anterior: R$ 800)",
+        "💸 Despesa: R$ 420 · saldo R$ 1.880",
+        "⏱️ Foco: 12h30 (antes: 9h)",
+        "✅ Tarefas de faturamento: 5 (antes: 3)",
+        "🔁 Hábitos: 18/24",
+        "📊 Score médio: 62",
+        "",
+        "Fecha a semana: vitórias, o que não deu certo e o foco da próxima.",
+        "Revisão semanal: https://nucleo-beta.vercel.app/revisao?aba=semana",
+      ].join("\n"),
+    );
+  });
+  it("obrigatórios: receita e link", () => {
+    expect(mustInclude(W)).toEqual(["R$ 2.300", "https://nucleo-beta.vercel.app/revisao?aba=semana"]);
   });
 });
 

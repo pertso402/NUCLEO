@@ -6,14 +6,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendText, whatsappEnv } from "@/lib/whatsapp/evolution";
 import { REPLY_MARK } from "@/lib/whatsapp/webhook";
 import { todayISO, weekday } from "@/lib/dates";
-import { loadBriefingFacts, loadClosingFacts } from "./facts";
+import type { MessageFacts } from "./compose";
+import { loadBriefingFacts, loadClosingFacts, loadWeeklyFacts } from "./facts";
 import { writeMessage } from "./writer";
 
 /**
  * Executa uma rotina agendada (Vercel Cron → GET; chamada manual → GET/POST com x-nucleo-token).
  * `?dry=1`: só monta e devolve o texto (não envia nem grava). `?force=1`: ignora "não é dia útil".
  */
-export async function runScheduled(kind: "briefing" | "closing", request: NextRequest) {
+export async function runScheduled(kind: "briefing" | "closing" | "weekly", request: NextRequest) {
   if (!isAuthorizedCron(request.headers)) {
     return NextResponse.json({ error: "não autorizado" }, { status: 401 });
   }
@@ -36,8 +37,24 @@ export async function runScheduled(kind: "briefing" | "closing", request: NextRe
       }
     }
 
-    const facts =
-      kind === "briefing" ? await loadBriefingFacts(ctx) : await loadClosingFacts(ctx, `${url.origin}/revisao`);
+    if (kind === "weekly" && !force && weekday(today) !== 0) {
+      return NextResponse.json({ ok: true, kind, skipped: "a revisão semanal é no domingo" });
+    }
+
+    let facts: MessageFacts;
+    if (kind === "briefing") facts = await loadBriefingFacts(ctx);
+    else if (kind === "closing") facts = await loadClosingFacts(ctx, `${url.origin}/revisao`);
+    else {
+      const w = await loadWeeklyFacts(ctx, `${url.origin}/revisao?aba=semana`);
+      facts = w.facts;
+      // Foto dos números da semana (o texto da revisão o Peter completa na tela; não sobrescreve).
+      if (!dry) {
+        const { error } = await supabase
+          .from("weekly_reviews")
+          .upsert({ user_id: userId, week_start: w.weekStart, numbers: w.numbers }, { onConflict: "user_id,week_start" });
+        if (error) console.error("cron: falha ao gravar números da semana", error.message);
+      }
+    }
 
     // O fechamento grava o score do dia (a Revisão completa o resto — 2.7).
     if (kind === "closing" && !dry) {
