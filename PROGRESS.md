@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 2 (Fase 1 com a 1.9 aguardando configuração — ver Bloqueios)
-**Próxima tarefa:** 2.1 aplicar a migration no Supabase (ver Bloqueios), depois 2.2
+**Próxima tarefa:** 2.2
 
 ---
 
@@ -39,7 +39,7 @@
 ---
 
 ## Fase 2 — Rotina: tarefas, hábitos, tempo, briefings, Siri e widget
-- [ ] 2.1 Migrations: `tasks`, `habits`, `habit_logs`, `time_entries`, `daily_reviews`, `goals`, `recurring_rules`, `push_subscriptions` + `v_habit_streaks` — **migration pronta e validada** (`20261113220000_routine.sql`), falta aplicar no Supabase
+- [x] 2.1 Migrations: `tasks`, `habits`, `habit_logs`, `time_entries`, `daily_reviews`, `goals`, `recurring_rules`, `push_subscriptions` + `v_habit_streaks`
 - [ ] 2.2 Ferramentas do parser: `add_task`, `complete_task`, `log_habit`, `start_timer`, `stop_timer`, `log_time` + fixtures
 - [ ] 2.3 Tela **Rotina** (abas Tarefas · Hábitos com heatmap · Tempo)
 - [ ] 2.4 Tela **Objetivos** (trimestre, área, porquê, métrica, tarefas vinculadas)
@@ -128,7 +128,6 @@
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
-- 2026-11-13 — **2.1 aplicar migration:** o conector Supabase desta sessão está logado em outra conta (só vê ROLETA/ERP-CHAPELAO/CARDAPIOS), sem acesso ao projeto `tarulbqnnbqdrvwsphcw`, e `SUPABASE_DB_URL` está vazio. Saídas: colar `supabase/migrations/20261113220000_routine.sql` no SQL Editor do projeto, preencher `SUPABASE_DB_URL` no `.env.local`, ou reconectar o conector com a conta do NÚCLEO.
 - 2026-11-13 — **1.9 ativação:** depende do Peter/das credenciais: `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE`, `PETER_WHATSAPP_NUMBER` (e opcionalmente `WHATSAPP_MODE`, `ELEVENLABS_API_KEY`) na Vercel, e o webhook da instância apontando para `/api/whatsapp?token=…` (passo a passo em `integrations/whatsapp/README.md`). Depois: teste real e critérios de aceite da Fase 1.
 
 ## Configuração pendente com o Peter
@@ -172,3 +171,4 @@
 | 2026-11-13 | 1.9 (parcial) | Fluxo n8n `nucleo-whatsapp.json` (webhook → Config → filtro → áudio: base64 do webhook ou download na Evolution → ElevenLabs Scribe → `/api/ingest` → resposta via Evolution `sendText`), README com instalação, 16 testes dos nós Code. Produção confirmada: token certo passa da autenticação (teste com payload inválido, nada gravado). Falta o Peter importar/ativar. 127 testes. |
 | 2026-11-13 | 1.9 (código) | Trocado o n8n por código, a pedido do Peter: `app/api/whatsapp` (token, 200 imediato, `after()`), `lib/whatsapp/{webhook,evolution,stt,handle}.ts`, guia em `integrations/whatsapp/README.md`; fluxo n8n removido; docs sem n8n (cron → Vercel Cron). 22 testes (filtro, resposta, áudio com/sem base64, falhas, limite, duplicata). Falta configurar Evolution/variáveis e testar de verdade. |
 | 2026-11-13 | 2.1 (parcial) | Migration `20261113220000_routine.sql`: `goals`, `tasks`, `habits`, `habit_logs`, `time_entries` (1 timer aberto por usuário), `daily_reviews`, `weekly_reviews`, `recurring_rules`, `push_subscriptions` + RLS, `updated_at`, `v_habit_streaks`, Realtime em tasks/habit_logs/time_entries. Validada em PGlite com todas as migrations: 27 checagens (constraints, RLS entre dois usuários, sequências diária/semanal). Não aplicada (ver Bloqueios). |
+| 2026-11-13 | 2.1 ✓ | Peter aplicou a migration pelo SQL Editor do projeto do NÚCLEO (a primeira tentativa foi em outro projeto e foi desfeita pelo próprio Supabase; ERP-CHAPELAO e CARDAPIOS conferidos limpos). Conferido via API: as 9 tabelas e `v_habit_streaks` respondem com a service role; sem login, tudo vem vazio (RLS). |
