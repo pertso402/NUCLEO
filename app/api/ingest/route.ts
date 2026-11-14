@@ -28,14 +28,21 @@ async function authorize(request: NextRequest): Promise<boolean> {
 
 export async function POST(request: NextRequest) {
   if (!(await authorize(request))) {
-    return NextResponse.json({ error: "não autorizado" }, { status: 401 });
+    // reply_text em todo erro: o Atalho da Siri mostra/fala sempre esse campo.
+    return NextResponse.json(
+      { error: "não autorizado", status: "error", reply_text: "Token inválido. Confira o token no Atalho." },
+      { status: 401 },
+    );
   }
 
   let body: z.infer<typeof Body>;
   try {
     body = Body.parse(await request.json());
   } catch {
-    return NextResponse.json({ error: "payload inválido: { channel, text }" }, { status: 400 });
+    return NextResponse.json(
+      { error: "payload inválido: { channel, text }", status: "error", reply_text: "Não ouvi nada pra lançar." },
+      { status: 400 },
+    );
   }
 
   const limit = rateLimit(`ingest:${body.channel}`);
