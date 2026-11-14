@@ -137,6 +137,13 @@ describe("ajudantes dos fatos", () => {
     const f = milestoneFacts({ milestone: { id: "m", title: "R$ 10k de receita", metricLabel: "", deadline: null }, pace })!;
     expect(f).toMatchObject({ title: "R$ 10k de receita", current: "R$ 6.200", target: "R$ 10.000", remaining: "R$ 3.800", pct: 62 });
     expect(milestoneFacts(null)).toBeNull();
+    const zero = computePace({
+      currentCents: 0,
+      targetCents: 1_000_000,
+      period: { start: "2026-11-01", end: "2026-11-30" },
+      now: new Date("2026-11-13T15:00:00Z"),
+    });
+    expect(milestoneFacts({ milestone: { id: "m", title: "x", metricLabel: "", deadline: null }, pace: zero })!.neededPerDay).toBe("R$ 910");
   });
 });
 

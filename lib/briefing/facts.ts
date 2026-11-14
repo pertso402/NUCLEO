@@ -36,7 +36,8 @@ export function milestoneFacts(h: HighlightMilestone | null): MilestoneFacts | n
     pct: Math.floor(p.pct * 100),
     achieved: p.achieved,
     onTrack: p.onTrack,
-    neededPerDay: brl(p.paceNeededCents),
+    // Meta diária em reais inteiros, arredondada pra cima (R$ 909,10 → R$ 910).
+    neededPerDay: brl(Math.ceil(p.paceNeededCents / 100) * 100),
     bdLeft: p.bdLeft,
   };
 }
