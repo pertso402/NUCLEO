@@ -22,10 +22,20 @@ interface Expected {
   occurred_on?: string;
   counterparty_includes?: string;
   query_kind?: "milestone_status" | "month_summary" | "category_total";
+  // rotina (null = tem que vir null)
+  title_includes?: string;
+  due_on?: string | null;
+  moves_revenue?: boolean;
+  task_ref_includes?: string;
+  habit_ref?: string;
+  date?: string | null;
+  label_includes?: string;
+  minutes?: number;
 }
 
 const fixtures = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../fixtures/ingest.json"), "utf8")) as {
   now: string;
+  context: { habits: string[]; openTasks: string[]; goals: string[]; openTimer: { label: string | null; minutes: number } | null };
   cases: { text: string; expect: Expected[] }[];
 };
 
@@ -61,6 +71,27 @@ function mismatches(call: ToolCall, exp: Expected): string[] {
     if (exp.query_kind && call.args.kind !== exp.query_kind) out.push(`consulta ${call.args.kind} ≠ ${exp.query_kind}`);
     if (exp.category && call.args.category !== exp.category) out.push(`categoria "${call.args.category}" ≠ "${exp.category}"`);
   }
+  if (call.name === "add_task") {
+    const a = call.args;
+    if (exp.title_includes && !norm(a.title).includes(norm(exp.title_includes))) out.push(`título "${a.title}" sem "${exp.title_includes}"`);
+    if (exp.due_on !== undefined && a.due_on !== exp.due_on) out.push(`prazo ${a.due_on} ≠ ${exp.due_on}`);
+    if (exp.moves_revenue !== undefined && a.moves_revenue !== exp.moves_revenue) out.push(`faturamento ${a.moves_revenue} ≠ ${exp.moves_revenue}`);
+  }
+  if (call.name === "complete_task" && exp.task_ref_includes && !norm(call.args.task_ref).includes(norm(exp.task_ref_includes))) {
+    out.push(`tarefa "${call.args.task_ref}" sem "${exp.task_ref_includes}"`);
+  }
+  if (call.name === "log_habit") {
+    if (exp.habit_ref && call.args.habit_ref !== exp.habit_ref) out.push(`hábito "${call.args.habit_ref}" ≠ "${exp.habit_ref}"`);
+    if (exp.date !== undefined && call.args.date !== exp.date) out.push(`data ${call.args.date} ≠ ${exp.date}`);
+  }
+  if (call.name === "start_timer" && exp.label_includes && !norm(call.args.label).includes(norm(exp.label_includes))) {
+    out.push(`timer "${call.args.label}" sem "${exp.label_includes}"`);
+  }
+  if (call.name === "log_time") {
+    if (exp.minutes !== undefined && call.args.minutes !== exp.minutes) out.push(`minutos ${call.args.minutes} ≠ ${exp.minutes}`);
+    if (exp.label_includes && !norm(call.args.label).includes(norm(exp.label_includes))) out.push(`rótulo "${call.args.label}" sem "${exp.label_includes}"`);
+    if (exp.date !== undefined && call.args.date !== exp.date) out.push(`data ${call.args.date} ≠ ${exp.date}`);
+  }
   return out;
 }
 
@@ -70,6 +101,7 @@ describe.skipIf(!process.env.OPENAI_API_KEY)(`parser (${process.env.OPENAI_MODEL
       now: new Date(fixtures.now),
       incomeCategories: INCOME,
       expenseCategories: EXPENSE,
+      ...fixtures.context,
     });
 
     // Casa cada esperado com uma chamada (ordem livre), sem sobrar nem faltar.

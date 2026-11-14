@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { composeReply, executeCalls, type ActionOutcome, type Category } from "./executor";
+import { composeReply, executeCalls, type ActionOutcome, type Category, type RoutineState } from "./executor";
 import { parseMessage, ParserError } from "./parser";
 
 export type Channel = "whatsapp" | "siri" | "app" | "palette";
@@ -28,6 +28,32 @@ export async function resolveOwnerId(supabase: SupabaseClient): Promise<string> 
   if (!data || data.length !== 1) throw new Error(`Esperava 1 linha em settings, achei ${data?.length ?? 0}`);
   ownerIdCache = data[0]!.user_id as string;
   return ownerIdCache;
+}
+
+/** Hábitos, tarefas abertas, objetivos e timer: vão para o prompt e para as ferramentas. */
+export async function loadRoutineState(supabase: SupabaseClient, userId: string): Promise<RoutineState> {
+  const [habits, tasks, goals, timer] = await Promise.all([
+    supabase.from("habits").select("id, name").eq("user_id", userId).eq("active", true).order("position"),
+    supabase
+      .from("tasks")
+      .select("id, title, due_on, moves_revenue")
+      .eq("user_id", userId)
+      .eq("status", "todo")
+      .order("due_on", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(40),
+    supabase.from("goals").select("id, title").eq("user_id", userId).eq("status", "active").order("position"),
+    supabase.from("time_entries").select("id, label, started_at").eq("user_id", userId).is("ended_at", null).maybeSingle(),
+  ]);
+  for (const r of [habits, tasks, goals, timer]) {
+    if (r.error) throw new Error(`Falha ao ler a rotina: ${r.error.message}`);
+  }
+  return {
+    habits: (habits.data ?? []) as RoutineState["habits"],
+    openTasks: (tasks.data ?? []) as RoutineState["openTasks"],
+    goals: (goals.data ?? []) as RoutineState["goals"],
+    openTimer: (timer.data ?? null) as RoutineState["openTimer"],
+  };
 }
 
 function sourceOf(channel: Channel): "whatsapp" | "siri" | "app" {
@@ -72,27 +98,39 @@ export async function runIngest(input: { channel: Channel; text: string; now?: D
     ]);
     if (catError) throw new Error(`Falha ao ler categorias: ${catError.message}`);
     const categories = (cats ?? []) as Category[];
+    const routine = await loadRoutineState(supabase, userId);
 
     // 3. Entende a mensagem.
     const parsed = await parseMessage(input.text, {
       now,
       incomeCategories: categories.filter((c) => c.kind === "income").map((c) => c.name),
       expenseCategories: categories.filter((c) => c.kind === "expense").map((c) => c.name),
+      habits: routine.habits.map((h) => h.name),
+      openTasks: routine.openTasks.map((t) => t.title),
+      goals: routine.goals.map((g) => g.title),
+      openTimer: routine.openTimer
+        ? {
+            label: routine.openTimer.label,
+            minutes: Math.max(0, Math.round((now.getTime() - new Date(routine.openTimer.started_at).getTime()) / 60_000)),
+          }
+        : null,
       pendingClarification:
         prev?.raw_text && prev.reply_text ? { originalText: prev.raw_text, question: prev.reply_text } : null,
     });
 
     // 4. Executa e responde.
-    const ctx = { supabase, userId, inboxId, source: sourceOf(input.channel), now, categories };
+    const ctx = { supabase, userId, inboxId, source: sourceOf(input.channel), now, categories, routine };
     const outcomes: ActionOutcome[] = await executeCalls(parsed.calls, ctx);
     const reply = await composeReply(outcomes, ctx);
     const created = outcomes.flatMap((o) => o.created ?? []);
-    const onlyClarification = created.length === 0 && outcomes.some((o) => o.clarification) && !outcomes.some((o) => o.ok);
+    const updated = outcomes.flatMap((o) => o.updated ?? []);
+    const onlyClarification =
+      created.length === 0 && updated.length === 0 && outcomes.some((o) => o.clarification) && !outcomes.some((o) => o.ok);
     const status = onlyClarification ? "needs_clarification" : "ok";
 
     await finish({
       parsed: { model: parsed.model, calls: parsed.calls },
-      result: { created, lines: outcomes.map((o) => o.line) },
+      result: { created, updated, lines: outcomes.map((o) => o.line) },
       status,
       reply_text: reply,
       error: null,

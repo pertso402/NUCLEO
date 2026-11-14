@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 2 (Fase 1 com a 1.9 aguardando configuração — ver Bloqueios)
-**Próxima tarefa:** 2.2
+**Próxima tarefa:** 2.2 rodar a bateria do parser (sem crédito na OpenAI — ver Bloqueios), depois 2.3
 
 ---
 
@@ -40,7 +40,7 @@
 
 ## Fase 2 — Rotina: tarefas, hábitos, tempo, briefings, Siri e widget
 - [x] 2.1 Migrations: `tasks`, `habits`, `habit_logs`, `time_entries`, `daily_reviews`, `goals`, `recurring_rules`, `push_subscriptions` + `v_habit_streaks`
-- [ ] 2.2 Ferramentas do parser: `add_task`, `complete_task`, `log_habit`, `start_timer`, `stop_timer`, `log_time` + fixtures
+- [ ] 2.2 Ferramentas do parser: `add_task`, `complete_task`, `log_habit`, `start_timer`, `stop_timer`, `log_time` + fixtures — **código e fixtures prontos**, falta rodar `npm run test:parser` (OpenAI sem crédito)
 - [ ] 2.3 Tela **Rotina** (abas Tarefas · Hábitos com heatmap · Tempo)
 - [ ] 2.4 Tela **Objetivos** (trimestre, área, porquê, métrica, tarefas vinculadas)
 - [ ] 2.5 `lib/metrics/score.ts` + faixa "Hoje" e top 3 tarefas no Comando + princípio do dia
@@ -120,6 +120,8 @@
 - 2026-11-13 — Fase 2 iniciada com a 1.9 só faltando configuração (variáveis da Evolution na Vercel + webhook), a pedido do Peter ("depois configuramos"). Os critérios de aceite da Fase 1 ficam para quando o WhatsApp estiver ligado.
 - 2026-11-13 — 2.1: `lead_id` em `tasks`, `time_entries` e `recurring_rules` sem FK até a Fase 3 (mesmo motivo de `transactions`: `public.leads` é de outro sistema). `weekly_reviews` entrou já na 2.1 (mesma família de `daily_reviews`, usada na 2.7). `tasks.source` reaproveita o enum `capture_channel`. `recurring_rules.last_generated_on` evita lançamento duplicado na 2.11. `goals.position` para ordenar. Trigger `nucleo_check_habit_owner` impede marcar hábito de outro usuário.
 - 2026-11-13 — `v_habit_streaks`: hábito diário (`target_per_week = 7`) conta dias seguidos e continua vivo se o último dia marcado foi hoje ou ontem; hábito com meta semanal menor conta semanas (seg–dom) que bateram a meta e a semana em andamento não quebra a sequência. "Hoje" em America/Sao_Paulo. Coluna `unit` (`day`/`week`) diz qual.
+- 2026-11-13 — 2.2: o parser recebe hábitos ativos, até 40 tarefas abertas, objetivos ativos, o timer rodando e o calendário dos próximos 7 dias ("sexta" = próxima sexta depois de hoje), para não errar conta de data. Tarefa/hábito/objetivo são resolvidos no servidor por nome (`lib/ingest/match.ts`: igual → contém → palavras em comum; empate = pergunta qual). `lead_ref` fica para a Fase 3 (sem tabela de leads ainda).
+- 2026-11-13 — Rotina pelo ingest: prazo no passado vira hoje; hábito/tempo com data futura vira hoje; hábito já marcado no dia responde "já estava marcado" sem erro; iniciar timer com outro rodando fecha o anterior; `log_time` de outro dia termina às 18h daquele dia; parar o timer mostra o foco total do dia. O "desfaz" agora apaga o que foi criado (lançamentos, tarefas, hábitos, tempo) e restaura o que foi alterado (`result.updated` com o estado anterior), nessa ordem — o timer novo sai antes de reabrir o anterior.
 - 2026-11-13 — Tela Dinheiro: filtros (mês, tipo, categoria) vivem na URL (`?mes=2026-11&tipo=expense&cat=<id>`), então dá pra voltar/compartilhar o estado. Totais e relatórios usam só `confirmed` (mesma regra das views); o extrato mostra também `pending_review` com chip "revisar" e botão Confirmar por linha (a revisão em lote continua na 4.4). Edição/exclusão por server actions com a sessão do dono (RLS), valor como texto pt-BR → `parseBRL`; excluir pede confirmação em 2 toques. Receita acumulada é **dia a dia no mês**, com a meta do marco `revenue_month` do mês como linha tracejada. Categorias em barras horizontais simples (sem Recharts) que filtram o extrato ao tocar. Recharts 3.
 - 2026-11-13 — **Visual v2 "Neon"** (pedido do Peter: mais cyberpunk, mais luz e brilho, menos quadrado, menos apagado). Fundo com luzes de neon difusas que derivam, linhas de varredura e horizonte de luz; cards de vidro com filete de luz; raios maiores e chips em pílula; texto neon nos números de receita/progresso; anel em estilo gauge (escala de 60 marcas, ponto de luz na ponta); doca de vidro flutuante; gráficos com glow. Documentado no DESIGN.md (v2). Desfoque só em poucos elementos por tela (extrato sem desfoque) por causa do iPhone 11 Pro; luzes do fundo são gradientes (sem `filter: blur`) animando só `transform`.
 - 2026-11-13 — **Navegação instantânea** (Peter sentia atraso ao trocar de aba). Causa: cada aba esperava o servidor montar a página inteira (com consultas ao Supabase) antes de trocar. Correções: `app/(app)/loading.tsx` (esqueleto aparece na hora), aba acende no toque (`useOptimisticPath`), `prefetch` completo nas abas/sidebar (página com dados já baixada em segundo plano), cache do router (`experimental.staleTimes` 300s), entrada de tela de 180ms só com opacity/transform, `active:scale` em tudo que é tocável. Para o cache não mostrar dado velho, um **único `RealtimeRefresh` no layout** escuta `transactions`/`milestones` e chama `router.refresh()` (que descarta o cache) a cada mudança; as server actions também revalidam. Medido em dev: aba acende em 8 ms; voltar a uma aba visitada 22–78 ms (antes ~1,3 s). A sessão no `proxy.ts` já é validada localmente (`getClaims` com chave ES256).
@@ -128,6 +130,7 @@
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
+- 2026-11-13 — **OpenAI sem crédito** ("429 You have no credits remaining"): o parser não funciona — lançar pelo app (e pelo WhatsApp, quando ligado) responde erro até o Peter colocar crédito em platform.openai.com → Billing. Bloqueia rodar a bateria da 2.2.
 - 2026-11-13 — **1.9 ativação:** depende do Peter/das credenciais: `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE`, `PETER_WHATSAPP_NUMBER` (e opcionalmente `WHATSAPP_MODE`, `ELEVENLABS_API_KEY`) na Vercel, e o webhook da instância apontando para `/api/whatsapp?token=…` (passo a passo em `integrations/whatsapp/README.md`). Depois: teste real e critérios de aceite da Fase 1.
 
 ## Configuração pendente com o Peter
@@ -172,3 +175,4 @@
 | 2026-11-13 | 1.9 (código) | Trocado o n8n por código, a pedido do Peter: `app/api/whatsapp` (token, 200 imediato, `after()`), `lib/whatsapp/{webhook,evolution,stt,handle}.ts`, guia em `integrations/whatsapp/README.md`; fluxo n8n removido; docs sem n8n (cron → Vercel Cron). 22 testes (filtro, resposta, áudio com/sem base64, falhas, limite, duplicata). Falta configurar Evolution/variáveis e testar de verdade. |
 | 2026-11-13 | 2.1 (parcial) | Migration `20261113220000_routine.sql`: `goals`, `tasks`, `habits`, `habit_logs`, `time_entries` (1 timer aberto por usuário), `daily_reviews`, `weekly_reviews`, `recurring_rules`, `push_subscriptions` + RLS, `updated_at`, `v_habit_streaks`, Realtime em tasks/habit_logs/time_entries. Validada em PGlite com todas as migrations: 27 checagens (constraints, RLS entre dois usuários, sequências diária/semanal). Não aplicada (ver Bloqueios). |
 | 2026-11-13 | 2.1 ✓ | Peter aplicou a migration pelo SQL Editor do projeto do NÚCLEO (a primeira tentativa foi em outro projeto e foi desfeita pelo próprio Supabase; ERP-CHAPELAO e CARDAPIOS conferidos limpos). Conferido via API: as 9 tabelas e `v_habit_streaks` respondem com a service role; sem login, tudo vem vazio (RLS). |
+| 2026-11-13 | 2.2 (código) | Ferramentas `add_task`, `complete_task`, `log_habit`, `start_timer`, `stop_timer`, `log_time` (`lib/ingest/{tools,routine,match}.ts`), contexto de rotina no prompt (`loadRoutineState` em `run.ts`), desfaz com restauração. 23 testes novos com Supabase em memória (`tests/unit/helpers/fake-supabase.ts`); +14 frases de rotina nas fixtures (38 no total). Bateria real não rodou: OpenAI sem crédito. 156 testes. |

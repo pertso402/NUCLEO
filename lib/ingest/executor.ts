@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatBRL, parseBRL, toCents, type Cents } from "@/lib/money";
 import { todayISO, type ISODate } from "@/lib/dates";
 import { loadHighlightMilestone, syncAchievements } from "@/lib/data/milestone";
+import { addTask, completeTask, logHabit, logTime, startTimer, stopTimer } from "./routine";
 import type { ToolCall } from "./tools";
 
 export interface Category {
@@ -11,6 +12,16 @@ export interface Category {
   kind: "income" | "expense";
 }
 
+/** Estado da rotina usado pelo parser e pelas ferramentas (muda durante a mensagem). */
+export interface RoutineState {
+  habits: { id: string; name: string }[];
+  openTasks: { id: string; title: string; due_on: string | null; moves_revenue: boolean }[];
+  goals: { id: string; title: string }[];
+  openTimer: { id: string; label: string | null; started_at: string } | null;
+}
+
+export const EMPTY_ROUTINE: RoutineState = { habits: [], openTasks: [], goals: [], openTimer: null };
+
 export interface ExecContext {
   supabase: SupabaseClient; // admin (service_role): SEMPRE filtrar/gravar com userId
   userId: string;
@@ -18,11 +29,22 @@ export interface ExecContext {
   source: "whatsapp" | "siri" | "app";
   now: Date;
   categories: Category[];
+  routine: RoutineState;
 }
 
+/** Tabelas onde o ingest cria linhas (o "desfaz" apaga). */
+export type CreatedTable = "transactions" | "tasks" | "habit_logs" | "time_entries";
+
 export interface CreatedRef {
-  table: "transactions";
+  table: CreatedTable;
   id: string;
+}
+
+/** Linha alterada pelo ingest, com os valores de antes (o "desfaz" restaura). */
+export interface UpdatedRef {
+  table: "tasks" | "time_entries";
+  id: string;
+  before: Record<string, unknown>;
 }
 
 export interface ActionOutcome {
@@ -31,6 +53,7 @@ export interface ActionOutcome {
   /** Linha da resposta (WhatsApp). */
   line: string;
   created?: CreatedRef[];
+  updated?: UpdatedRef[];
   incomeAdded?: boolean;
   clarification?: boolean;
   undone?: boolean;
@@ -169,14 +192,26 @@ async function undoLast(ctx: ExecContext): Promise<ActionOutcome> {
     .limit(20);
   if (error) throw new Error(`Falha ao buscar último lançamento: ${error.message}`);
 
-  const target = (last ?? []).find((m) => Array.isArray(m.result?.created) && m.result.created.length > 0);
+  const hasChanges = (r: { created?: unknown; updated?: unknown } | null) =>
+    (Array.isArray(r?.created) && r.created.length > 0) || (Array.isArray(r?.updated) && r.updated.length > 0);
+  const target = (last ?? []).find((m) => hasChanges(m.result));
   if (!target) return { tool: "undo_last", ok: false, line: "Não tem nada pra desfazer." };
 
-  const created = target.result.created as CreatedRef[];
-  const ids = created.filter((c) => c.table === "transactions").map((c) => c.id);
-  if (ids.length) {
-    const { error: delError } = await ctx.supabase.from("transactions").delete().eq("user_id", ctx.userId).in("id", ids);
+  // Primeiro apaga o que foi criado, depois restaura o que foi alterado
+  // (ex.: timer novo sai antes de reabrir o anterior — só pode haver 1 aberto).
+  const created = (Array.isArray(target.result.created) ? target.result.created : []) as CreatedRef[];
+  const updated = (Array.isArray(target.result.updated) ? target.result.updated : []) as UpdatedRef[];
+  const UNDO_TABLES: readonly CreatedTable[] = ["transactions", "tasks", "habit_logs", "time_entries"];
+  for (const table of UNDO_TABLES) {
+    const ids = created.filter((c) => c.table === table).map((c) => c.id);
+    if (!ids.length) continue;
+    const { error: delError } = await ctx.supabase.from(table).delete().eq("user_id", ctx.userId).in("id", ids);
     if (delError) throw new Error(`Falha ao desfazer: ${delError.message}`);
+  }
+  for (const u of updated) {
+    if (u.table !== "tasks" && u.table !== "time_entries") continue;
+    const { error: upErr } = await ctx.supabase.from(u.table).update(u.before).eq("id", u.id).eq("user_id", ctx.userId);
+    if (upErr) throw new Error(`Falha ao desfazer: ${upErr.message}`);
   }
   const { error: upError } = await ctx.supabase
     .from("inbox_messages")
@@ -185,7 +220,9 @@ async function undoLast(ctx: ExecContext): Promise<ActionOutcome> {
     .eq("user_id", ctx.userId);
   if (upError) throw new Error(`Falha ao marcar como desfeito: ${upError.message}`);
 
-  const lines: string[] = Array.isArray(target.result?.lines) ? target.result.lines : [];
+  const lines: string[] = (Array.isArray(target.result?.lines) ? target.result.lines : []).flatMap((l: unknown) =>
+    String(l).split("\n"),
+  );
   const what = lines.filter((l) => l.startsWith("✅")).map((l) => l.replace(/^✅\s*/, "")).join("; ");
   return { tool: "undo_last", ok: true, undone: true, line: `↩️ Desfeito${what ? `: ${what}` : "."}` };
 }
@@ -212,6 +249,24 @@ export async function executeCalls(calls: ToolCall[], ctx: ExecContext): Promise
       case "undo_last":
         out.push(await undoLast(ctx));
         break;
+      case "add_task":
+        out.push(await addTask(call.args, ctx));
+        break;
+      case "complete_task":
+        out.push(await completeTask(call.args, ctx));
+        break;
+      case "log_habit":
+        out.push(await logHabit(call.args, ctx));
+        break;
+      case "start_timer":
+        out.push(await startTimer(call.args, ctx));
+        break;
+      case "stop_timer":
+        out.push(await stopTimer(ctx));
+        break;
+      case "log_time":
+        out.push(await logTime(call.args, ctx));
+        break;
       case "ask_clarification":
         out.push({ tool: "ask_clarification", ok: false, clarification: true, line: `❓ ${call.args.question}` });
         break;
@@ -223,8 +278,8 @@ export async function executeCalls(calls: ToolCall[], ctx: ExecContext): Promise
 /** Monta a resposta: linhas das ações + estado do marco se entrou receita + dica do "desfaz". */
 export async function composeReply(outcomes: ActionOutcome[], ctx: ExecContext): Promise<string> {
   const lines = outcomes.map((o) => o.line);
-  // Qualquer lançamento pode bater um marco (receita ou saldo do mês).
-  if (outcomes.some((o) => o.created?.length)) {
+  // Qualquer lançamento de dinheiro pode bater um marco (receita ou saldo do mês).
+  if (outcomes.some((o) => o.created?.some((c) => c.table === "transactions"))) {
     const batidos = await syncAchievements(ctx.supabase, { userId: ctx.userId, now: ctx.now });
     for (const b of batidos) lines.push(achievementLine(b.title, b.currentCents, b.days));
   }
@@ -232,6 +287,6 @@ export async function composeReply(outcomes: ActionOutcome[], ctx: ExecContext):
     const h = await loadHighlightMilestone(ctx.supabase, { userId: ctx.userId, now: ctx.now });
     if (h) lines.push(milestoneLine(h.milestone.title, h.pace));
   }
-  if (outcomes.some((o) => o.created?.length)) lines.push('↩️ "desfaz" pra reverter');
+  if (outcomes.some((o) => o.created?.length || o.updated?.length)) lines.push('↩️ "desfaz" pra reverter');
   return lines.join("\n");
 }

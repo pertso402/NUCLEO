@@ -1,12 +1,20 @@
 import "server-only";
 import OpenAI from "openai";
-import { formatLongDate, todayISO, zonedParts } from "@/lib/dates";
+import { addDays, formatLongDate, formatShortDate, todayISO, weekday, zonedParts } from "@/lib/dates";
 import { TOOL_DEFINITIONS, ToolCallSchema, type ToolCall } from "./tools";
 
 export interface ParserContext {
   now: Date;
   incomeCategories: string[];
   expenseCategories: string[];
+  /** Hábitos ativos (nomes). */
+  habits?: string[];
+  /** Tarefas abertas (títulos, as de prazo mais próximo primeiro). */
+  openTasks?: string[];
+  /** Objetivos ativos (títulos). */
+  goals?: string[];
+  /** Timer rodando agora, se houver. */
+  openTimer?: { label: string | null; minutes: number } | null;
   /** Se a mensagem anterior do mesmo canal pediu esclarecimento há pouco. */
   pendingClarification?: { originalText: string; question: string } | null;
 }
@@ -26,14 +34,32 @@ function openai(): OpenAI {
   return client;
 }
 
+const WEEKDAYS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
+/** Próximos 7 dias com o nome do dia: o modelo não precisa fazer conta de calendário. */
+function nextDays(today: string): string {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = addDays(today, i + 1);
+    return `${WEEKDAYS[weekday(d)]} ${formatShortDate(d)} = ${d}`;
+  }).join("; ");
+}
+
+const quoted = (items: string[] | undefined, empty: string) =>
+  items && items.length ? items.map((t) => `"${t}"`).join(", ") : empty;
+
 export function buildSystemPrompt(ctx: ParserContext): string {
   const today = todayISO(ctx.now);
   const p = zonedParts(ctx.now);
   const hora = `${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")}`;
+  const timer = ctx.openTimer
+    ? `rodando há ${ctx.openTimer.minutes} min${ctx.openTimer.label ? ` ("${ctx.openTimer.label}")` : ""}`
+    : "nenhum";
   return [
     "Você é o parser do NÚCLEO, o app pessoal do Peter (autônomo, presta serviços).",
     "Transforme a mensagem dele em chamadas de ferramenta. Nunca responda em texto livre.",
     `Agora em São Paulo: ${formatLongDate(today)} (${today}), ${hora}.`,
+    `Ontem = ${addDays(today, -1)}. Próximos dias: ${nextDays(today)}.`,
+    "Dia da semana citado ('sexta', 'na segunda') = a próxima ocorrência DEPOIS de hoje (use a lista acima).",
     "",
     "Regras:",
     "- Uma mensagem pode ter vários lançamentos: uma chamada de add_transaction para cada.",
@@ -50,8 +76,21 @@ export function buildSystemPrompt(ctx: ParserContext): string {
     "- Pergunta sobre números ('quanto falta', 'quanto gastei com X') = query.",
     "- Faltou o valor de um lançamento, ou não dá pra entender = ask_clarification com uma pergunta curta.",
     "",
+    "Rotina:",
+    "- 'tarefa:', 'preciso', 'tenho que', 'lembrar de', 'fulano pediu X, manda sexta' = add_task. Título curto no infinitivo, sem a data.",
+    "- moves_revenue = true quando a tarefa leva a dinheiro: proposta, orçamento, cobrança, follow-up, reunião de venda, fechar cliente, prospectar.",
+    "- 'fiz/mandei/terminei/concluí' + algo das tarefas abertas = complete_task (copie o título da lista). Se não estiver na lista e for hábito, log_habit; senão ask_clarification.",
+    "- 'fiz academia', 'treinei', 'li', 'meditei' = log_habit com o nome EXATO do hábito da lista. Vários hábitos = várias chamadas. Hábito fora da lista = ask_clarification.",
+    "- 'li 20 min' é o hábito de leitura (log_habit), não log_time. log_time é para trabalho ('trabalhei 2h no site').",
+    "- 'começa timer X' / 'bora focar em X' = start_timer; 'para o timer' / 'parei o foco' = stop_timer.",
+    "- Dinheiro junto com hábito ou tarefa na mesma mensagem: uma chamada para cada coisa.",
+    "",
     `Categorias de receita: ${ctx.incomeCategories.join(", ")}.`,
     `Categorias de despesa: ${ctx.expenseCategories.join(", ")}.`,
+    `Hábitos ativos: ${quoted(ctx.habits, "nenhum cadastrado")}.`,
+    `Tarefas abertas: ${quoted(ctx.openTasks, "nenhuma")}.`,
+    `Objetivos ativos: ${quoted(ctx.goals, "nenhum")}.`,
+    `Timer: ${timer}.`,
   ].join("\n");
 }
 
