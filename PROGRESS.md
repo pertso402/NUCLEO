@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 3 (aceite das Fases 1 e 2 pendente — ver Bloqueios; o Peter pediu para seguir e deixar o crédito da OpenAI para depois)
-**Próxima tarefa:** 3.1 aplicar a migration `20261114200000_pipeline.sql` no SQL Editor do projeto do NÚCLEO, depois 3.2
+**Próxima tarefa:** 3.2
 
 ---
 
@@ -58,7 +58,7 @@
 ---
 
 ## Fase 3 — Pipeline (CRM) + Funil reverso
-- [ ] 3.1 Migrations: `leads` (com constraints de próxima ação), `lead_events` (trigger de stage), `outreach_logs`, `v_mrr` — **migration pronta e validada** (`20261114200000_pipeline.sql`), falta aplicar no Supabase
+- [x] 3.1 Migrations: `leads` (com constraints de próxima ação), `lead_events` (trigger de stage), `outreach_logs`, `v_mrr`
 - [ ] 3.2 Ferramentas do parser: `create_lead`, `update_lead`, `log_outreach` + fixtures
 - [ ] 3.3 Tela **Pipeline**: kanban, detalhe do lead, histórico, ação rápida no mobile
 - [ ] 3.4 `lib/metrics/funnel.ts` (ARCHITECTURE §6.3) com testes + painel do funil reverso
@@ -144,7 +144,6 @@
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
-- 2026-11-14 — **3.1 aplicar migration:** o conector Supabase desta sessão não alcança o projeto do NÚCLEO; o Peter cola `supabase/migrations/20261114200000_pipeline.sql` no SQL Editor (https://supabase.com/dashboard/project/tarulbqnnbqdrvwsphcw/sql/new).
 - 2026-11-14 — **Crédito na OpenAI** e **WhatsApp**: o Peter disse "Tudo feito", mas na conferência a chave do app ainda responde sem crédito e não há variáveis da Evolution na Vercel (o assistente ficou parado na 1ª pergunta). O Peter pediu para deixar o crédito para depois e seguir.
 - 2026-11-13 — **OpenAI sem crédito** ("429 You have no credits remaining"): o parser não funciona — lançar pelo app (e pelo WhatsApp, quando ligado) responde erro até o Peter colocar crédito em platform.openai.com → Billing. Bloqueia rodar a bateria da 2.2.
 - 2026-11-13 — **1.9 ativação:** depende do Peter/das credenciais: `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE`, `PETER_WHATSAPP_NUMBER` (e opcionalmente `WHATSAPP_MODE`, `ELEVENLABS_API_KEY`) na Vercel, e o webhook da instância apontando para `/api/whatsapp?token=…` (passo a passo em `integrations/whatsapp/README.md`). Depois: teste real e critérios de aceite da Fase 1.
@@ -202,3 +201,4 @@
 | 2026-11-14 | 2.10 ✓ | Botão de captura com gravação (MediaRecorder, formato escolhido pelo navegador — mp4 no iPhone), pílula "0:07 · solte pra enviar · arraste pra cancelar", halo Volt rápido; palette mostra a transcrição com ícone de microfone. `/api/ingest/audio` + `lib/ingest/audio.ts`. 9 testes (regras e rota com STT/ingest simulados). Conferido no navegador com microfone simulado: toque abre texto, segurar grava e envia (sem login → "Sessão expirada", nada gravado), arrastar cancela sem enviar. Falta testar no iPhone; transcrever depende de crédito na OpenAI. |
 | 2026-11-14 | 2.11 ✓ | `lib/metrics/recurring.ts` (5 testes), `lib/recurring.ts` (4 testes com Supabase em memória: gera, não duplica, dry, só do dono), `/api/cron/recorrentes` no Vercel Cron, cartão "Recorrentes" no Dinheiro (criar/editar/pausar/excluir, saldo fixo por mês) e actions. Conferido em 375×812 com dados fictícios; consulta no banco real. 225 testes, build ok. **Fase 2 com todas as tarefas feitas; aceite pendente** (ver acima). |
 | 2026-11-14 | 3.1 (parcial) | Migration do pipeline (`crm_leads`, `crm_lead_events`, `outreach_logs`, `v_mrr`, FKs de `lead_id`, Realtime). Validada em PGlite com todas as migrations: 25 checagens (lead vivo sem próxima ação, perda sem motivo, gatilhos de etapa/fechamento/contrato, eventos, MRR, FK set null, RLS entre dois usuários, evento só no lead do dono). Não aplicada (ver Bloqueios). |
+| 2026-11-15 | 3.1 ✓ | Peter aplicou a migration do pipeline no SQL Editor. Conferido via API: `crm_leads` (todas as colunas), `crm_lead_events`, `outreach_logs`, `v_mrr` e a FK `tasks → crm_leads` respondem; sem login vem tudo vazio (RLS); a `leads` do outro sistema segue intacta. |
