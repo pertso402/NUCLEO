@@ -1,5 +1,6 @@
 import "server-only";
-import { addDays, dayInstantRange, todayISO, weekday, type ISODate } from "@/lib/dates";
+import { dayInstantRange, todayISO } from "@/lib/dates";
+import { nextBusinessDay } from "@/lib/metrics/pipeline";
 import { formatBRL, parseBRL } from "@/lib/money";
 import { matchByName } from "./match";
 import { dayLabel } from "./routine";
@@ -35,12 +36,7 @@ const LIVE = (s: LeadLite["stage"]) => s !== "fechado" && s !== "perdido";
 
 export const leadLabel = (l: Pick<LeadLite, "name" | "business">) => (l.business ? `${l.name} (${l.business})` : l.name);
 
-/** Próximo dia útil (seg–sex) a partir de amanhã: prazo padrão quando ele não disse quando. */
-export function nextBusinessDay(today: ISODate): ISODate {
-  let d = addDays(today, 1);
-  while (weekday(d) === 0 || weekday(d) === 6) d = addDays(d, 1);
-  return d;
-}
+export { nextBusinessDay };
 
 /** Abordagens de hoje = leads criados hoje em "abordado" + abordagens registradas em lote (ARCHITECTURE §4.5). */
 export async function outreachToday(ctx: ExecContext): Promise<number> {
