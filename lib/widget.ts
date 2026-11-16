@@ -19,7 +19,7 @@ export interface WidgetPayload {
   /** Dias úteis restantes no período do marco. */
   bd_left: number;
   score_today: number;
-  /** Pipeline chega na Fase 3: até lá, null. */
+  /** Abordagens de hoje e meta do funil reverso (null quando não há meta). */
   outreach_today: number | null;
   outreach_goal: number | null;
   focus_minutes: number;
@@ -38,6 +38,8 @@ export function buildWidgetPayload(
     focusGoalMinutes: number;
     habitsDone: number;
     habitsExpected: number;
+    outreachDone?: number;
+    outreachGoal?: number;
   },
   now: Date,
 ): WidgetPayload {
@@ -54,8 +56,8 @@ export function buildWidgetPayload(
     achieved: p?.achieved ?? false,
     bd_left: p?.bdLeft ?? 0,
     score_today: today.score.score,
-    outreach_today: null,
-    outreach_goal: null,
+    outreach_today: today.outreachDone ?? null,
+    outreach_goal: today.outreachGoal ? today.outreachGoal : null,
     focus_minutes: Math.round(today.focusMinutes),
     focus_goal_minutes: today.focusGoalMinutes,
     habits_done: today.habitsDone,

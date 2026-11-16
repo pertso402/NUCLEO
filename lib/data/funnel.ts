@@ -5,6 +5,7 @@ import { loadHighlightMilestone } from "@/lib/data/milestone";
 import {
   averageTicket,
   computeRates,
+  dailyOutreachGoal,
   parseDefaultRates,
   reverseFunnel,
   type Rates,
@@ -33,11 +34,7 @@ export interface FunnelData {
   dailyGoal: { value: number; auto: boolean };
 }
 
-/** Meta do dia: funil (mínimo 1) quando automática e calculável; marco coberto ou sem funil → a meta manual. */
-export function dailyOutreachGoal(auto: boolean, manual: number, funnel: ReverseFunnel | null): { value: number; auto: boolean } {
-  if (auto && funnel && funnel.perDay > 0) return { value: funnel.perDay, auto: true };
-  return { value: Math.max(manual, 0), auto: false };
-}
+export { dailyOutreachGoal };
 
 type Ctx = { supabase: SupabaseClient; userId: string };
 

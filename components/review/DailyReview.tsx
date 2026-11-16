@@ -66,7 +66,11 @@ export function DailyReview({
     },
     { label: "Foco", value: day.workday ? `${fmtMin(day.focusMinutes)} de ${fmtMin(day.focusGoalMinutes)}` : "folga", v: val("focus") },
     { label: "Hábitos", value: day.habitsExpected ? `${day.habitsDone}/${day.habitsExpected}` : "—", v: val("habits") },
-    { label: "Abordagens", value: "— (Pipeline)", v: null },
+    {
+      label: "Abordagens",
+      value: day.workday && day.outreachGoal ? `${day.outreachDone}/${day.outreachGoal}` : String(day.outreachDone),
+      v: val("outreach"),
+    },
   ];
   const maxScore = Math.max(...last7.map((d) => d.score ?? 0), 1);
 

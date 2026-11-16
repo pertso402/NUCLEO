@@ -70,6 +70,8 @@ export async function loadBriefingFacts({ supabase, userId, now }: Ctx): Promise
     revenueTasks: day.revenueTasks.map((t) => `${t.title}${dueText(t.due_on, today)}`),
     tasksDueCount: due.count ?? 0,
     habits: habitNames,
+    outreachGoal: day.workday ? day.outreachGoal : 0,
+    outreachAuto: day.outreachAuto,
     focusGoal: day.workday && day.focusGoalMinutes > 0 ? fmtMinutes(day.focusGoalMinutes) : "",
     principle: day.principle?.text ?? null,
   };
@@ -103,6 +105,8 @@ export async function loadClosingFacts({ supabase, userId, now }: Ctx, reviewUrl
     focusGoal: day.workday && day.focusGoalMinutes > 0 ? fmtMinutes(day.focusGoalMinutes) : "",
     habitsDone: day.habitsDone,
     habitsExpected: day.habitsExpected,
+    outreachDone: day.outreachDone,
+    outreachGoal: day.workday ? day.outreachGoal : 0,
     incomeToday: incomeCents > 0 ? brl(incomeCents) : null,
     milestone: milestoneFacts(highlight),
     tomorrowCount: tomorrowTasks.count ?? 0,

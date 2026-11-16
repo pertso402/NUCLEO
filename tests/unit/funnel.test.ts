@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { averageTicket, computeRates, DEFAULT_RATES, parseDefaultRates, reverseFunnel, type StageEvent } from "@/lib/metrics/funnel";
+import { averageTicket, computeRates, dailyOutreachGoal, DEFAULT_RATES, parseDefaultRates, reverseFunnel, type StageEvent } from "@/lib/metrics/funnel";
 
 const NOW = new Date("2026-11-16T15:00:00Z");
 const ev = (lead: string, to: string, daysAgo = 5): StageEvent => ({
@@ -89,5 +89,15 @@ describe("ticket e padrões", () => {
   it("default_conv_rates inválido cai no padrão por chave", () => {
     expect(parseDefaultRates({ r1: 0.2, r2: "x", r3: 2, r4: 0.5 })).toEqual({ r1: 0.2, r2: 0.4, r3: 0.7, r4: 0.5 });
     expect(parseDefaultRates(null)).toEqual(DEFAULT_RATES);
+  });
+});
+
+describe("meta de abordagens do dia (3.5)", () => {
+  it("automática usa o funil; marco coberto, sem funil ou manual usam a meta das configurações", () => {
+    expect(dailyOutreachGoal(true, 5, { perDay: 12 })).toEqual({ value: 12, auto: true });
+    expect(dailyOutreachGoal(true, 5, { perDay: 0 })).toEqual({ value: 5, auto: false });
+    expect(dailyOutreachGoal(true, 5, null)).toEqual({ value: 5, auto: false });
+    expect(dailyOutreachGoal(false, 5, { perDay: 12 })).toEqual({ value: 5, auto: false });
+    expect(dailyOutreachGoal(false, -1, null).value).toBe(0);
   });
 });

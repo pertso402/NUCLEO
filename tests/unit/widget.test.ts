@@ -30,6 +30,11 @@ describe("buildWidgetPayload", () => {
     expect(p.expected_pct).toBeGreaterThan(0);
   });
 
+  it("abordagens do dia e meta do funil (3.5)", () => {
+    expect(buildWidgetPayload(null, { ...today, outreachDone: 7, outreachGoal: 12 }, NOW)).toMatchObject({ outreach_today: 7, outreach_goal: 12 });
+    expect(buildWidgetPayload(null, { ...today, outreachDone: 0, outreachGoal: 0 }, NOW)).toMatchObject({ outreach_today: 0, outreach_goal: null });
+  });
+
   it("sem marco ativo", () => {
     expect(buildWidgetPayload(null, today, NOW)).toMatchObject({ milestone_title: null, current_cents: 0, pct: 0, achieved: false });
   });

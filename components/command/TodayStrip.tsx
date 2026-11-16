@@ -10,13 +10,21 @@ function fmtMin(m: number): string {
   return r ? `${h}h${String(r).padStart(2, "0")}` : `${h}h`;
 }
 
-/** Faixa "Hoje" (DESIGN §9): Abordagens · Foco · Hábitos. Abordagens chega com o Pipeline (Fase 3). */
+/** Faixa "Hoje" (DESIGN §9): Abordagens · Foco · Hábitos. A meta de abordagens vem do funil reverso (3.5). */
 export function TodayStrip({ data }: { data: TodayData }) {
   const focusHit = data.focusGoalMinutes > 0 && data.focusMinutes >= data.focusGoalMinutes;
   const habitsHit = data.habitsExpected > 0 && data.habitsDone >= data.habitsExpected;
+  const outreachHit = data.outreachGoal > 0 && data.outreachDone >= data.outreachGoal;
   return (
     <div className="grid grid-cols-3 gap-2">
-      <StatTile label={<span className="text-[10px] tracking-[0.02em]">Abordagens</span>} value={<span className="text-text-2">—</span>} unit={<span className="text-[10px]">pipeline</span>} />
+      <Link href="/pipeline" className="min-w-0 rounded-md transition-transform duration-150 active:scale-[0.97]">
+        <StatTile
+          label={<span className="text-[10px] tracking-[0.02em]">Abordagens</span>}
+          value={<span className={outreachHit ? "neon-volt" : data.outreachDone > 0 ? "text-ion" : undefined}>{data.outreachDone}</span>}
+          unit={data.workday && data.outreachGoal > 0 ? `/${data.outreachGoal}` : "folga"}
+          className="h-full"
+        />
+      </Link>
       <Link href="/rotina?aba=tempo" className="min-w-0 rounded-md transition-transform duration-150 active:scale-[0.97]">
         <StatTile
           label="Foco"

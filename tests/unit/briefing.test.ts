@@ -38,6 +38,8 @@ const BRIEF: BriefingFacts = {
   revenueTasks: ["Cobrar parcela do Choppatinhas (atrasada desde 11/11)", "Mandar proposta pra Gelato (hoje)"],
   tasksDueCount: 4,
   habits: ["Academia", "Leitura"],
+  outreachGoal: 12,
+  outreachAuto: true,
   focusGoal: "4h",
   principle: "Proposta enviada hoje vale mais que proposta perfeita.",
 };
@@ -52,6 +54,8 @@ const CLOSE: ClosingFacts = {
   focusGoal: "4h",
   habitsDone: 2,
   habitsExpected: 3,
+  outreachDone: 7,
+  outreachGoal: 12,
   incomeToday: "R$ 1.500",
   milestone: M,
   tomorrowCount: 2,
@@ -70,6 +74,7 @@ describe("mensagens de reserva (sem IA)", () => {
         "💰 Movem faturamento hoje:",
         "1. Cobrar parcela do Choppatinhas (atrasada desde 11/11)",
         "2. Mandar proposta pra Gelato (hoje)",
+        "📣 Meta de abordagens: 12 (pelo funil reverso).",
         "📋 Mais 2 tarefas pra hoje.",
         "🔁 Hábitos: Academia, Leitura.",
         "⏱️ Meta de foco: 4h.",
@@ -80,7 +85,7 @@ describe("mensagens de reserva (sem IA)", () => {
   });
 
   it("briefing sem marco nem tarefas pede o próximo passo", () => {
-    const t = fallbackBriefing({ ...BRIEF, milestone: null, revenueTasks: [], tasksDueCount: 0, habits: [], focusGoal: "", principle: null });
+    const t = fallbackBriefing({ ...BRIEF, milestone: null, revenueTasks: [], tasksDueCount: 0, habits: [], outreachGoal: 0, focusGoal: "", principle: null });
     expect(t).toBe("☀️ Bom dia, Peter. Sexta-feira, 13 de novembro.\n\n💰 Nenhuma tarefa de faturamento na fila. Qual é o próximo passo pra entrar dinheiro?");
   });
 
@@ -93,6 +98,7 @@ describe("mensagens de reserva (sem IA)", () => {
     const t = fallbackClosing(CLOSE);
     expect(t.split("\n")[0]).toBe("🌙 Fechamento de sexta-feira, 13 de novembro: score 64/100.");
     expect(t).toContain("💰 Tarefas de faturamento: 2/3");
+    expect(t).toContain("📣 Abordagens: 7/12");
     expect(t).toContain("⏱️ Foco: 2h45 de 4h");
     expect(t).toContain("🔁 Hábitos: 2/3");
     expect(t).toContain("✅ Entrou hoje: R$ 1.500");

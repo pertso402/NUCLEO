@@ -1,5 +1,6 @@
 import "server-only";
-import { dayInstantRange, todayISO } from "@/lib/dates";
+import { countOutreach } from "@/lib/data/outreach";
+import { todayISO } from "@/lib/dates";
 import { nextBusinessDay } from "@/lib/metrics/pipeline";
 import { formatBRL, parseBRL } from "@/lib/money";
 import { matchByName } from "./match";
@@ -40,22 +41,7 @@ export { nextBusinessDay };
 
 /** Abordagens de hoje = leads criados hoje em "abordado" + abordagens registradas em lote (ARCHITECTURE §4.5). */
 export async function outreachToday(ctx: ExecContext): Promise<number> {
-  const today = todayISO(ctx.now);
-  const { from, to } = dayInstantRange(today);
-  const [logs, leads] = await Promise.all([
-    ctx.supabase.from("outreach_logs").select("count").eq("user_id", ctx.userId).eq("log_date", today),
-    ctx.supabase
-      .from("crm_lead_events")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", ctx.userId)
-      .eq("type", "stage_change")
-      .is("from_stage", null)
-      .eq("to_stage", "abordado")
-      .gte("created_at", from.toISOString())
-      .lt("created_at", to.toISOString()),
-  ]);
-  const logged = (logs.data ?? []).reduce((s: number, r: { count: number }) => s + Number(r.count), 0);
-  return logged + (leads.count ?? 0);
+  return countOutreach(ctx.supabase, ctx.userId, todayISO(ctx.now));
 }
 
 export async function createLead(args: Args<"create_lead">, ctx: ExecContext): Promise<ActionOutcome> {

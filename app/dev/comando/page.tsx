@@ -31,7 +31,7 @@ function fakeToday(empty: boolean): TodayData {
   return {
     today: "2026-11-13",
     workday: true,
-    score: computeScore({ workday: true, outreachDone: null, outreachGoal: null, focusGoalMinutes: 240, ...input }),
+    score: computeScore({ workday: true, outreachDone: empty ? 0 : 7, outreachGoal: 12, focusGoalMinutes: 240, ...input }),
     focusMinutes: input.focusMinutes,
     focusGoalMinutes: 240,
     habitsExpected: input.habitsExpected,
@@ -45,6 +45,9 @@ function fakeToday(empty: boolean): TodayData {
         ],
     revenueDoneToday: input.revenueTasksDone,
     revenuePlanned: input.revenueTasksPlanned,
+    outreachDone: empty ? 0 : 7,
+    outreachGoal: 12,
+    outreachAuto: true,
     principle: empty ? null : { id: id(9), text: "Proposta enviada hoje vale mais que proposta perfeita semana que vem." },
   };
 }

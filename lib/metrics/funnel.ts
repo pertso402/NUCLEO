@@ -137,3 +137,9 @@ export function reverseFunnel(input: {
   const perDay = outreach > 0 ? Math.max(1, safeCeil(outreach / Math.max(input.bdLeft, 1))) : 0;
   return { contractsNeeded, pipelineCredit, contracts, proposals, meetings, conversations, outreach, perDay };
 }
+
+/** Meta do dia: funil (mínimo 1) quando automática e calculável; marco coberto ou sem funil → a meta manual. */
+export function dailyOutreachGoal(auto: boolean, manual: number, funnel: Pick<ReverseFunnel, "perDay"> | null): { value: number; auto: boolean } {
+  if (auto && funnel && funnel.perDay > 0) return { value: funnel.perDay, auto: true };
+  return { value: Math.max(manual, 0), auto: false };
+}

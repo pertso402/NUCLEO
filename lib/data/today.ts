@@ -1,6 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { dayInstantRange, startOfWeek, todayISO, weekday, type ISODate } from "@/lib/dates";
+import { loadFunnel } from "@/lib/data/funnel";
+import { countOutreach } from "@/lib/data/outreach";
 import { entryMinutes } from "@/lib/metrics/routine";
 import { computeScore, habitsForToday, principleOfDay, type DayScore } from "@/lib/metrics/score";
 import { createClient } from "@/lib/supabase/server";
@@ -19,6 +21,11 @@ export interface TodayData {
   focusGoalMinutes: number;
   habitsExpected: number;
   habitsDone: number;
+  /** Abordagens de hoje (leads novos em "abordado" + lote). */
+  outreachDone: number;
+  /** Meta do dia: funil reverso se automática, senão a manual (ARCHITECTURE §6.3). */
+  outreachGoal: number;
+  outreachAuto: boolean;
   /** Até 3 tarefas abertas que mexem faturamento (atrasadas/hoje primeiro). */
   revenueTasks: RevenueTask[];
   revenueDoneToday: number;
@@ -52,7 +59,7 @@ export async function loadToday(
   const { from, to } = dayInstantRange(today);
   const weekStart = startOfWeek(today);
 
-  const [settings, openRevenue, doneRevenue, entries, habits, logs, principles] = await Promise.all([
+  const [settings, openRevenue, doneRevenue, entries, habits, logs, principles, outreachDone, funnel] = await Promise.all([
     supabase.from("settings").select("workdays, daily_focus_minutes_goal").eq("user_id", userId).maybeSingle(),
     supabase
       .from("tasks")
@@ -92,7 +99,10 @@ export async function loadToday(
       .eq("active", true)
       .order("position")
       .order("created_at"),
+    countOutreach(supabase, userId, today),
+    loadFunnel(now, { supabase, userId }),
   ]);
+  const outreachGoal = funnel.dailyGoal.value;
 
   const workdays = (settings.data?.workdays as number[] | undefined) ?? [1, 2, 3, 4, 5];
   const workday = workdays.includes(weekday(today));
@@ -124,8 +134,8 @@ export async function loadToday(
     workday,
     revenueTasksPlanned: plannedOpen + plannedDone,
     revenueTasksDone: done.length,
-    outreachDone: null, // Pipeline (Fase 3)
-    outreachGoal: null,
+    outreachDone,
+    outreachGoal: outreachGoal > 0 ? outreachGoal : null,
     focusMinutes,
     focusGoalMinutes,
     habitsExpected: hab.expected,
@@ -140,6 +150,9 @@ export async function loadToday(
     focusGoalMinutes,
     habitsExpected: hab.expected,
     habitsDone: hab.done,
+    outreachDone,
+    outreachGoal,
+    outreachAuto: funnel.dailyGoal.auto,
     revenueTasks: open.slice(0, 3),
     revenueDoneToday: done.length,
     revenuePlanned: plannedOpen + plannedDone,

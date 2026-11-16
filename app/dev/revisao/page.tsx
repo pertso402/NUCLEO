@@ -16,7 +16,7 @@ const input = { revenueTasksPlanned: 3, revenueTasksDone: 2, focusMinutes: 165, 
 const DAY: TodayData = {
   today: "2026-11-13",
   workday: true,
-  score: computeScore({ workday: true, outreachDone: null, outreachGoal: null, focusGoalMinutes: 240, ...input }),
+  score: computeScore({ workday: true, outreachDone: 7, outreachGoal: 12, focusGoalMinutes: 240, ...input }),
   focusMinutes: 165,
   focusGoalMinutes: 240,
   habitsExpected: 3,
@@ -24,6 +24,9 @@ const DAY: TodayData = {
   revenueTasks: [],
   revenueDoneToday: 2,
   revenuePlanned: 3,
+  outreachDone: 7,
+  outreachGoal: 12,
+  outreachAuto: true,
   principle: null,
 };
 

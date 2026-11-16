@@ -28,6 +28,9 @@ export interface BriefingFacts {
   tasksDueCount: number;
   /** Hábitos previstos para hoje. */
   habits: string[];
+  /** Meta de abordagens de hoje (0 = sem meta) e se veio do funil reverso. */
+  outreachGoal: number;
+  outreachAuto: boolean;
   /** "4h" (vazio se o dia não é útil). */
   focusGoal: string;
   principle: string | null;
@@ -43,6 +46,8 @@ export interface ClosingFacts {
   focusGoal: string;
   habitsDone: number;
   habitsExpected: number;
+  outreachDone: number;
+  outreachGoal: number;
   /** Receita lançada hoje ("R$ 1.500") ou null se nada entrou. */
   incomeToday: string | null;
   milestone: MilestoneFacts | null;
@@ -91,6 +96,7 @@ export function fallbackBriefing(f: BriefingFacts): string {
   } else {
     lines.push("💰 Nenhuma tarefa de faturamento na fila. Qual é o próximo passo pra entrar dinheiro?");
   }
+  if (f.outreachGoal > 0) lines.push(`📣 Meta de abordagens: ${f.outreachGoal}${f.outreachAuto ? " (pelo funil reverso)" : ""}.`);
   const others = f.tasksDueCount - f.revenueTasks.length;
   if (others > 0) lines.push(`📋 Mais ${others} ${others === 1 ? "tarefa" : "tarefas"} pra hoje.`);
   if (f.habits.length) lines.push(`🔁 Hábitos: ${f.habits.join(", ")}.`);
@@ -102,6 +108,9 @@ export function fallbackBriefing(f: BriefingFacts): string {
 export function fallbackClosing(f: ClosingFacts): string {
   const lines = [`🌙 Fechamento de ${f.dateLabel}: score ${f.score}/100.`, ""];
   lines.push(`💰 Tarefas de faturamento: ${f.revenueDone}${f.revenuePlanned ? `/${Math.min(f.revenuePlanned, 3)}` : ""}`);
+  if (f.outreachGoal > 0 || f.outreachDone > 0) {
+    lines.push(`📣 Abordagens: ${f.outreachDone}${f.outreachGoal > 0 ? `/${f.outreachGoal}` : ""}`);
+  }
   if (f.focusGoal) lines.push(`⏱️ Foco: ${f.focus} de ${f.focusGoal}`);
   if (f.habitsExpected) lines.push(`🔁 Hábitos: ${f.habitsDone}/${f.habitsExpected}`);
   if (f.incomeToday) lines.push(`✅ Entrou hoje: ${f.incomeToday}`);
