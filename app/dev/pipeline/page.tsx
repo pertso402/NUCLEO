@@ -1,11 +1,15 @@
 import { notFound } from "next/navigation";
 import { GridBackground } from "@/components/hud/GridBackground";
+import { FunnelPanel } from "@/components/pipeline/FunnelPanel";
 import { PipelineBoard } from "@/components/pipeline/PipelineBoard";
+import type { FunnelData } from "@/lib/data/funnel";
+import { computeRates, DEFAULT_RATES, reverseFunnel } from "@/lib/metrics/funnel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import type { Lead } from "@/lib/data/pipeline";
 
 /**
- * Vitrine do Pipeline com leads fictícios (404 em produção). `?vazio=1` para o quadro vazio.
+ * Vitrine do Pipeline com leads fictícios (404 em produção). `?vazio=1` para o quadro vazio;
+ * `?funil=semticket|semmarco` para os estados do painel do funil.
  * Não use os botões de salvar/arrastar aqui: eles falam com o banco de verdade.
  */
 const TODAY = "2026-11-16";
@@ -56,6 +60,14 @@ const LEADS: Lead[] = [
   lead(7, { name: "Sorveteria Gelato", stage: "perdido", next_action: null, next_action_on: null, lost_reason: "preco" }),
 ];
 
+const rates = computeRates([], DEFAULT_RATES, new Date("2026-11-16T15:00:00Z"));
+function fakeFunnel(mode: string | undefined): FunnelData {
+  const milestone = { title: "R$ 10k de mensalidades", metric: "mrr", currentCents: 90_000, targetCents: 1_000_000, remainingCents: 910_000, bdLeft: 10 };
+  const ticket = mode === "semticket" ? { ticketCents: null, sample: 0, estimated: true } : { ticketCents: 90_000, sample: 1, estimated: false };
+  const funnel = ticket.ticketCents ? reverseFunnel({ remainingCents: milestone.remainingCents, ticketCents: ticket.ticketCents, rates: DEFAULT_RATES, openProposals: 1, bdLeft: 10 }) : null;
+  return { milestone: mode === "semmarco" ? null : milestone, rates, ticket, openProposals: 1, funnel, dailyGoal: { value: funnel?.perDay ?? 5, auto: true } };
+}
+
 export default async function DevPipelinePage(props: PageProps<"/dev/pipeline">) {
   if (process.env.NODE_ENV === "production") notFound();
   const sp = await props.searchParams;
@@ -64,7 +76,10 @@ export default async function DevPipelinePage(props: PageProps<"/dev/pipeline">)
       <GridBackground />
       <main className="mx-auto w-full max-w-content px-4 pt-6 pb-28 lg:px-8">
         <PageHeader title="Pipeline" kicker="Leads e próximos passos" />
-        <PipelineBoard leads={sp.vazio === "1" ? [] : LEADS} today={TODAY} nowIso="2026-11-16T15:00:00Z" />
+        <div className="flex flex-col gap-5">
+          <FunnelPanel data={fakeFunnel(typeof sp.funil === "string" ? sp.funil : undefined)} />
+          <PipelineBoard leads={sp.vazio === "1" ? [] : LEADS} today={TODAY} nowIso="2026-11-16T15:00:00Z" />
+        </div>
       </main>
     </>
   );

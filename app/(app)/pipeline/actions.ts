@@ -206,3 +206,14 @@ export async function loadLeadEvents(leadId: string): Promise<LeadEvent[]> {
     .limit(100);
   return (data ?? []) as LeadEvent[];
 }
+
+/** Ticket médio padrão (usado pelo funil enquanto não há contratos fechados com valor). */
+export async function setDefaultTicket(value: string): Promise<ActionResult> {
+  const cents = money(value);
+  if (!cents) return { ok: false, error: "Informe um valor por mês (ex.: 900)." };
+  const supabase = await authed();
+  if (!supabase) return NOT_AUTHED;
+  const { data } = await supabase.auth.getClaims();
+  const { error } = await supabase.from("settings").update({ default_ticket_cents: cents }).eq("user_id", data?.claims?.sub ?? "");
+  return done(error, "salvar o ticket médio");
+}
