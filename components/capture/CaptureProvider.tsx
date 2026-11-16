@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { toWav } from "@/lib/audio-wav";
 import { CommandPalette } from "./CommandPalette";
 
 export type CaptureChannel = "app" | "palette";
@@ -94,8 +95,10 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
       const update = (patch: Partial<Exchange>) =>
         setExchanges((xs) => xs.map((x) => (x.id === id ? { ...x, ...patch } : x)));
       try {
+        // WAV mono 16 kHz: o MP4 do iPhone às vezes é recusado pela transcrição.
+        const wav = await toWav(audio);
         const form = new FormData();
-        form.append("audio", audio, audio.type.includes("mp4") ? "audio.m4a" : "audio.webm");
+        form.append("audio", wav, wav.type === "audio/wav" ? "audio.wav" : audio.type.includes("mp4") ? "audio.mp4" : "audio.webm");
         const res = await fetch("/api/ingest/audio", { method: "POST", body: form });
         const data = (await res.json()) as { status?: Exchange["status"]; reply_text?: string; transcript?: string | null };
         update({
