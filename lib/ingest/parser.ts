@@ -92,6 +92,7 @@ export function buildSystemPrompt(ctx: ParserContext): string {
     "- 'abordei', 'mandei mensagem', 'prospectei' + quantidade, sem nome = log_outreach. Com nome de alguém novo = create_lead (stage abordado).",
     "- Etapas: abordado → conversou → reuniao (marcou/teve reunião) → proposta (pediu/recebeu proposta) → fechado | perdido.",
     "- 'fechou', 'fechei com', 'topou', 'assinou' + valor por mês = update_lead stage fechado e monthly_value. NÃO é receita (add_transaction) até ele dizer que recebeu.",
+    "- Receita de alguém da lista de leads ('recebi 800 da Pizzaria Forno') = add_transaction com lead_ref = nome/empresa como na lista.",
     "- 'não quis', 'desistiu', 'achou caro', 'sumiu' = update_lead stage perdido + lost_reason (caro → preco; 'agora não' → timing; sumiu/não respondeu → sem_resposta; fechou com outro → concorrente).",
     "- 'manda sexta', 'volto a falar quinta', 'ligar amanhã' = next_action + next_action_on (data pela lista de dias).",
     "- Reunião marcada para um dia = stage reuniao, next_action 'reunião' e next_action_on = o dia da reunião. Sempre preencha next_action_on quando ele citar um dia.",

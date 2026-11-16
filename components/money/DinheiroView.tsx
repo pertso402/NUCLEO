@@ -147,7 +147,7 @@ export function DinheiroView({
             </p>
           </HudCard>
         ) : (
-          <Statement transactions={filtered} categories={data.categories} />
+          <Statement transactions={filtered} categories={data.categories} leads={data.leads} />
         )}
       </section>
 

@@ -19,7 +19,7 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       parameters: {
         type: "object",
         additionalProperties: false,
-        required: ["kind", "amount", "category", "description", "counterparty", "occurred_on"],
+        required: ["kind", "amount", "category", "description", "counterparty", "occurred_on", "lead_ref"],
         properties: {
           kind: { type: "string", enum: ["income", "expense"], description: "income = dinheiro entrando; expense = saindo" },
           amount: { type: "string", description: "Valor em reais exatamente como dito: '1500', '38,90', '1.500', '1,5 mil', '2k'" },
@@ -27,6 +27,7 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           description: { ...nullableString, description: "Descrição curta (ex.: 'almoço', 'gasolina')" },
           counterparty: { ...nullableString, description: "Cliente, loja ou pessoa, se citado" },
           occurred_on: { ...nullableString, description: "YYYY-MM-DD se a pessoa disse outro dia ('ontem', 'sexta'); null = hoje" },
+          lead_ref: { ...nullableString, description: "Receita de um cliente que está na lista de leads: nome ou empresa como na lista; senão null" },
         },
       },
     },
@@ -261,6 +262,7 @@ export const ToolCallSchema = z.discriminatedUnion("name", [
       description: z.string().nullable(),
       counterparty: z.string().nullable(),
       occurred_on: isoDate.nullable(),
+      lead_ref: z.string().nullable().default(null),
     }),
   }),
   z.object({

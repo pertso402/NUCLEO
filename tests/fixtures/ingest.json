@@ -484,6 +484,17 @@
           "next_action_on": "2026-11-17"
         }
       ]
+    },
+    {
+      "text": "recebi 800 da Pizzaria Forno, primeira mensalidade",
+      "expect": [
+        {
+          "tool": "add_transaction",
+          "kind": "income",
+          "amount_cents": 80000,
+          "lead_ref_includes": "forno"
+        }
+      ]
     }
   ],
   "context": {

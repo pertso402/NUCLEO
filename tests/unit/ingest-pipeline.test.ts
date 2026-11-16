@@ -194,3 +194,29 @@ describe("parser: pipeline", () => {
     expect(nextBusinessDay("2026-11-16")).toBe("2026-11-17");
   });
 });
+
+describe("3.8: receita vinculada a lead e MRR", () => {
+  const base = { stage: null, next_action: null, next_action_on: null, lost_reason: null, monthly_value: null, note: null } as const;
+
+  it("fechar lead marca mrrChanged; só mudar próximo passo não", async () => {
+    const { run } = setup([lead("l1", { name: "Pizzaria Forno", stage: "reuniao" }), lead("l2", { name: "Ana" })]);
+    const [a] = await run([{ name: "update_lead", args: { ...base, lead_ref: "forno", stage: "fechado", monthly_value: "800" } }]);
+    expect(a!.mrrChanged).toBe(true);
+    const [b] = await run([{ name: "update_lead", args: { ...base, lead_ref: "Ana", next_action: "ligar", next_action_on: "2026-11-18" } }]);
+    expect(b!.mrrChanged).toBe(false);
+  });
+
+  it("receita de cliente do pipeline grava lead_id (pelo lead_ref ou pelo cliente citado)", async () => {
+    const { db, ctx, run } = setup([lead("l1", { name: "Pizzaria Forno" }), lead("l2", { name: "Ana", business: "Açaí Tropical" })]);
+    ctx.categories = [{ id: "c1", name: "Receita de cliente", kind: "income" }];
+    const [a, b, c] = await run([
+      { name: "add_transaction", args: { kind: "income", amount: "800", category: "Receita de cliente", description: null, counterparty: null, occurred_on: null, lead_ref: "Forno" } },
+      { name: "add_transaction", args: { kind: "income", amount: "300", category: "Receita de cliente", description: null, counterparty: "Açaí Tropical", occurred_on: null, lead_ref: null } },
+      { name: "add_transaction", args: { kind: "income", amount: "50", category: "Receita de cliente", description: null, counterparty: "Fulano", occurred_on: null, lead_ref: null } },
+    ]);
+    expect(db.tables.transactions!.map((t) => t.lead_id)).toEqual(["l1", "l2", null]);
+    expect(a!.line).toContain("cliente: Pizzaria Forno");
+    expect(b!.line).not.toContain("cliente:");
+    expect(c!.line).not.toContain("cliente:");
+  });
+});

@@ -202,6 +202,10 @@ export async function updateLead(args: Args<"update_lead">, ctx: ExecContext): P
     return { tool: "update_lead", ok: true, line: `✅ ${leadLabel(lead)}: nada mudou.` };
   }
   outcome.line = `✅ ${leadLabel(lead)}: ${parts.join(" · ")}`;
+  // fechou agora, saiu de fechado, ou mudou a mensalidade de um fechado → MRR mudou
+  outcome.mrrChanged = Boolean(
+    patch.stage === "fechado" || (patch.stage !== undefined && before.stage === "fechado") || (stage === "fechado" && "monthly_value_cents" in patch),
+  );
   return outcome;
 }
 

@@ -50,7 +50,14 @@ export async function milestoneCurrentCents(
   m: Pick<MilestoneRow, "metric" | "period_start" | "period_end">,
   opts: Opts = {},
 ): Promise<Cents> {
-  if (m.metric === "mrr") return 0; // depende do pipeline (Fase 3)
+  if (m.metric === "mrr") {
+    // Mensalidades ativas = soma dos contratos fechados e ativos (v_mrr, ARCHITECTURE §4.8). Não depende do período.
+    let mq = supabase.from("v_mrr").select("mrr_cents");
+    if (opts.userId) mq = mq.eq("user_id", opts.userId);
+    const { data, error } = await mq.maybeSingle();
+    if (error) throw new Error(`Falha ao ler MRR: ${error.message}`);
+    return toCents((data?.mrr_cents as number | undefined) ?? 0);
+  }
   const now = opts.now ?? new Date();
   const period = resolvePeriod(m.period_start, m.period_end, todayISO(now));
   const range = metricDateRange(m.metric, period);
@@ -74,14 +81,18 @@ export interface HighlightMilestone {
   pace: PaceResult;
 }
 
-/** Marco em destaque (ativo, menor `position`) com o ritmo calculado agora. */
+/**
+ * Marco em destaque (ativo, menor `position`) com o ritmo calculado agora.
+ * `metric`: o primeiro ativo dessa métrica (ex.: "mrr" para a resposta de fechamento de lead).
+ */
 export async function loadHighlightMilestone(
   supabase: SupabaseClient,
-  opts: Opts = {},
+  opts: Opts & { metric?: MilestoneMetric } = {},
 ): Promise<HighlightMilestone | null> {
   const now = opts.now ?? new Date();
   let mq = supabase.from("milestones").select(SELECT).eq("status", "active");
   if (opts.userId) mq = mq.eq("user_id", opts.userId);
+  if (opts.metric) mq = mq.eq("metric", opts.metric);
   const { data, error } = await mq
     .order("position", { ascending: true })
     .order("created_at", { ascending: true })
@@ -150,7 +161,7 @@ export interface Achievement {
 
 /**
  * Marca como batidos os marcos ativos que chegaram na meta. Devolve só os que bateram AGORA.
- * Chamado depois de toda mudança em lançamentos ou marcos (ingest, tela Dinheiro, tela Marcos).
+ * Chamado depois de toda mudança em lançamentos, marcos ou contratos (ingest, Dinheiro, Marcos, Pipeline).
  * O `update ... where status = 'active'` evita marcar duas vezes em chamadas simultâneas.
  */
 export async function syncAchievements(supabase: SupabaseClient, opts: Opts = {}): Promise<Achievement[]> {
@@ -162,7 +173,6 @@ export async function syncAchievements(supabase: SupabaseClient, opts: Opts = {}
 
   const out: Achievement[] = [];
   for (const m of (data ?? []).map(normalize)) {
-    if (m.metric === "mrr") continue;
     const currentCents = await milestoneCurrentCents(supabase, m, { ...opts, now });
     if (currentCents < m.target_cents) continue;
     const achievedAt = now.toISOString();

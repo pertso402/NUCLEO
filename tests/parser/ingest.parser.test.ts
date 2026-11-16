@@ -85,6 +85,7 @@ function mismatches(call: ToolCall, exp: Expected): string[] {
     }
     if (exp.category && a.category !== exp.category) out.push(`categoria "${a.category}" ≠ "${exp.category}"`);
     if (exp.occurred_on && a.occurred_on !== exp.occurred_on) out.push(`data ${a.occurred_on} ≠ ${exp.occurred_on}`);
+    if (exp.lead_ref_includes && !norm(a.lead_ref ?? a.counterparty).includes(norm(exp.lead_ref_includes))) out.push(`lead "${a.lead_ref}" sem "${exp.lead_ref_includes}"`);
     if (exp.counterparty_includes) {
       const who = norm(a.counterparty) + " " + norm(a.description);
       if (!who.includes(norm(exp.counterparty_includes))) out.push(`cliente "${a.counterparty}" sem "${exp.counterparty_includes}"`);

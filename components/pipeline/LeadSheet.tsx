@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition, type FormEvent } from "react";
 import { ArrowRight, Check, MessageCircle, StickyNote, Trash2, X } from "lucide-react";
+import { Money } from "@/components/hud/Money";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import type { Lead, LeadEvent } from "@/lib/data/pipeline";
@@ -24,6 +25,7 @@ import {
   createLead,
   deleteLead,
   loadLeadEvents,
+  loadLeadRevenue,
   setContractStatus,
   updateLeadFields,
   type ActionResult,
@@ -211,6 +213,8 @@ function ExistingLead({
         </div>
       </details>
 
+      <LeadRevenue leadId={lead.id} />
+
       <History leadId={lead.id} />
 
       <button
@@ -380,6 +384,25 @@ function LeadForm({ today, lead, onDone }: { today: string; lead?: Lead; onDone:
         {status && <p className={cn("text-sm", status.ok ? "text-volt" : "text-flare")}>{status.text}</p>}
       </div>
     </form>
+  );
+}
+
+/** Quanto já entrou desse cliente (receitas vinculadas ao lead — 3.8). */
+function LeadRevenue({ leadId }: { leadId: string }) {
+  const [rev, setRev] = useState<{ totalCents: number; count: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    loadLeadRevenue(leadId).then((r) => alive && setRev(r));
+    return () => {
+      alive = false;
+    };
+  }, [leadId]);
+  if (!rev || rev.count === 0) return null;
+  return (
+    <p className="text-sm text-text-1">
+      Receita recebida: <Money cents={rev.totalCents} showCents={false} tone="volt" /> em {rev.count}{" "}
+      {rev.count === 1 ? "lançamento" : "lançamentos"}
+    </p>
   );
 }
 

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatBRL, parseBRL, toCents, type Cents } from "@/lib/money";
 import { todayISO, type ISODate } from "@/lib/dates";
 import { loadHighlightMilestone, syncAchievements } from "@/lib/data/milestone";
+import { matchByName } from "./match";
 import { createLead, logOutreach, outreachToday, updateLead } from "./pipeline";
 import { addTask, completeTask, logHabit, logTime, startTimer, stopTimer } from "./routine";
 import type { ToolCall } from "./tools";
@@ -75,6 +76,8 @@ export interface ActionOutcome {
   line: string;
   created?: CreatedRef[];
   updated?: UpdatedRef[];
+  /** Mexeu em contrato (lead fechado/mensalidade): checa conquistas e mostra o MRR. */
+  mrrChanged?: boolean;
   /** Entrou abordagem (lead novo em "abordado" ou log em lote): a resposta mostra o total do dia. */
   outreachAdded?: boolean;
   incomeAdded?: boolean;
@@ -123,6 +126,18 @@ async function addTransaction(
   const today = todayISO(ctx.now);
   const occurredOn: ISODate = args.occurred_on && args.occurred_on <= today ? args.occurred_on : today;
   const category = resolveCategory(ctx.categories, args.kind, args.category);
+  // Receita de cliente do pipeline: vincula ao lead (pelo lead_ref do modelo ou pelo cliente citado).
+  let lead: { id: string; name: string; business: string | null } | null = null;
+  if (args.kind === "income") {
+    for (const ref of [args.lead_ref, args.counterparty]) {
+      if (!ref) continue;
+      const m = matchByName(ctx.routine.leads, ref, (l) => `${l.name} ${l.business ?? ""}`);
+      if (m && "item" in m) {
+        lead = m.item;
+        break;
+      }
+    }
+  }
 
   const { data, error } = await ctx.supabase
     .from("transactions")
@@ -136,6 +151,7 @@ async function addTransaction(
       counterparty: args.counterparty,
       source: ctx.source,
       inbox_message_id: ctx.inboxId,
+      lead_id: lead?.id ?? null,
     })
     .select("id")
     .single();
@@ -147,6 +163,11 @@ async function addTransaction(
   if (args.counterparty) parts.push(args.counterparty);
   else if (args.description) parts.push(args.description);
   if (occurredOn !== today) parts.push(`em ${occurredOn.slice(8, 10)}/${occurredOn.slice(5, 7)}`);
+  if (lead) {
+    const said = (args.counterparty ?? "").toLowerCase();
+    const known = [lead.name, lead.business].filter(Boolean).some((n) => said.includes(String(n).toLowerCase()));
+    if (!known) parts.push(`cliente: ${lead.business ?? lead.name}`);
+  }
 
   return {
     tool: "add_transaction",
@@ -329,13 +350,17 @@ export async function executeCalls(calls: ToolCall[], ctx: ExecContext): Promise
 export async function composeReply(outcomes: ActionOutcome[], ctx: ExecContext): Promise<string> {
   const lines = outcomes.map((o) => o.line);
   // Qualquer lançamento de dinheiro pode bater um marco (receita ou saldo do mês).
-  if (outcomes.some((o) => o.created?.some((c) => c.table === "transactions"))) {
+  if (outcomes.some((o) => o.created?.some((c) => c.table === "transactions") || o.mrrChanged)) {
     const batidos = await syncAchievements(ctx.supabase, { userId: ctx.userId, now: ctx.now });
     for (const b of batidos) lines.push(achievementLine(b.title, b.currentCents, b.days));
   }
   if (outcomes.some((o) => o.incomeAdded)) {
     const h = await loadHighlightMilestone(ctx.supabase, { userId: ctx.userId, now: ctx.now });
     if (h) lines.push(milestoneLine(h.milestone.title, h.pace));
+  }
+  if (outcomes.some((o) => o.mrrChanged)) {
+    const mrr = await loadHighlightMilestone(ctx.supabase, { userId: ctx.userId, now: ctx.now, metric: "mrr" });
+    if (mrr) lines.push(milestoneLine(mrr.milestone.title, mrr.pace));
   }
   if (outcomes.some((o) => o.outreachAdded)) lines.push(`📣 Abordagens hoje: ${await outreachToday(ctx)}`);
   if (outcomes.some((o) => o.created?.length || o.updated?.length)) lines.push('↩️ "desfaz" pra reverter');

@@ -27,6 +27,7 @@ const UpdateSchema = z.object({
   category_id: id.nullable(),
   description: z.string().trim().max(500),
   counterparty: z.string().trim().max(200),
+  lead_id: id.nullable().default(null),
 });
 
 export type UpdateTransactionInput = z.input<typeof UpdateSchema>;
@@ -71,6 +72,7 @@ export async function updateTransaction(input: UpdateTransactionInput): Promise<
       category_id: v.category_id,
       description: v.description || null,
       counterparty: v.counterparty || null,
+      lead_id: v.lead_id,
     })
     .eq("id", v.id);
   if (error) return { ok: false, error: "Não foi possível salvar." };

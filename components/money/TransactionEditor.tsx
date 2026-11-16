@@ -4,7 +4,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
-import type { CategoryOption, Transaction } from "@/lib/data/dinheiro";
+import type { CategoryOption, LeadOption, Transaction } from "@/lib/data/dinheiro";
 import type { MoneyKind } from "@/lib/metrics/money-report";
 import { centsToInput, parseBRL } from "@/lib/money";
 import {
@@ -21,10 +21,13 @@ const field =
 export function TransactionEditor({
   tx,
   categories,
+  leads = [],
   onDone,
 }: {
   tx: Transaction;
   categories: CategoryOption[];
+  /** Leads para vincular receita (3.8). */
+  leads?: LeadOption[];
   onDone: () => void;
 }) {
   const [kind, setKind] = useState<MoneyKind>(tx.kind);
@@ -33,6 +36,7 @@ export function TransactionEditor({
   const [categoryId, setCategoryId] = useState(tx.category_id ?? "");
   const [description, setDescription] = useState(tx.description ?? "");
   const [counterparty, setCounterparty] = useState(tx.counterparty ?? "");
+  const [leadId, setLeadId] = useState(tx.lead_id ?? "");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -64,6 +68,7 @@ export function TransactionEditor({
         category_id: categoryId || null,
         description,
         counterparty,
+        lead_id: kind === "income" && leadId ? leadId : null,
       }),
     );
   }
@@ -138,6 +143,20 @@ export function TransactionEditor({
         <span className="label-instrument">{kind === "income" ? "Cliente" : "Loja / pessoa"}</span>
         <input value={counterparty} onChange={(e) => setCounterparty(e.target.value)} maxLength={200} className={field} />
       </label>
+
+      {kind === "income" && leads.length > 0 && (
+        <label className="flex flex-col gap-1">
+          <span className="label-instrument">Cliente do pipeline</span>
+          <select value={leadId} onChange={(e) => setLeadId(e.target.value)} className={field}>
+            <option value="">Nenhum</option>
+            {leads.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.business ? `${l.name} · ${l.business}` : l.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       {error && (
         <p role="alert" className="text-sm text-flare">

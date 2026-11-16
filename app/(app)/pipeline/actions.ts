@@ -6,6 +6,7 @@ import type { LeadEvent } from "@/lib/data/pipeline";
 import { parseISODate, todayISO } from "@/lib/dates";
 import { isLive, nextBusinessDay, type LeadStage } from "@/lib/metrics/pipeline";
 import { parseBRL } from "@/lib/money";
+import { syncAchievements } from "@/lib/data/milestone";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -33,6 +34,16 @@ async function authed(): Promise<Supa | null> {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
   return data.user ? supabase : null;
+}
+
+
+/** Mudou contrato (etapa fechado, contrato, mensalidade): o marco de MRR pode ter batido. Erro aqui não derruba a ação. */
+async function syncMrr(supabase: Supa): Promise<void> {
+  try {
+    await syncAchievements(supabase);
+  } catch (err) {
+    console.error("pipeline: syncAchievements", err instanceof Error ? err.message : err);
+  }
 }
 
 const NOT_AUTHED = { ok: false, error: "Sessão expirada. Entre de novo." } as const satisfies ActionResult;
@@ -110,6 +121,7 @@ export async function updateLeadFields(leadId: string, stage: LeadStage, input: 
   const supabase = await authed();
   if (!supabase) return NOT_AUTHED;
   const { error } = await supabase.from("crm_leads").update(row).eq("id", leadId);
+  if (!error && stage === "fechado") await syncMrr(supabase);
   return done(error, "salvar o lead");
 }
 
@@ -149,6 +161,7 @@ export async function moveLead(
     patch.next_action_on = null;
   }
   const { error } = await supabase.from("crm_leads").update(patch).eq("id", leadId);
+  if (!error) await syncMrr(supabase);
   return done(error, "mudar a etapa");
 }
 
@@ -158,6 +171,7 @@ export async function setContractStatus(leadId: string, status: "ativo" | "encer
   const supabase = await authed();
   if (!supabase) return NOT_AUTHED;
   const { error } = await supabase.from("crm_leads").update({ contract_status: status }).eq("id", leadId).eq("stage", "fechado");
+  if (!error) await syncMrr(supabase);
   return done(error, "mudar o contrato");
 }
 
@@ -216,4 +230,19 @@ export async function setDefaultTicket(value: string): Promise<ActionResult> {
   const { data } = await supabase.auth.getClaims();
   const { error } = await supabase.from("settings").update({ default_ticket_cents: cents }).eq("user_id", data?.claims?.sub ?? "");
   return done(error, "salvar o ticket médio");
+}
+
+/** Receita já recebida desse cliente (lançamentos confirmados vinculados ao lead). Leitura. */
+export async function loadLeadRevenue(leadId: string): Promise<{ totalCents: number; count: number }> {
+  if (!id.safeParse(leadId).success) return { totalCents: 0, count: 0 };
+  const supabase = await authed();
+  if (!supabase) return { totalCents: 0, count: 0 };
+  const { data } = await supabase
+    .from("transactions")
+    .select("amount_cents")
+    .eq("lead_id", leadId)
+    .eq("kind", "income")
+    .eq("status", "confirmed");
+  const rows = data ?? [];
+  return { totalCents: rows.reduce((s, r) => s + Number(r.amount_cents), 0), count: rows.length };
 }

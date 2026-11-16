@@ -19,6 +19,8 @@ export interface Transaction {
   category_id: string | null;
   description: string | null;
   counterparty: string | null;
+  /** Cliente do pipeline (receita vinculada a lead, 3.8). */
+  lead_id: string | null;
   source: string;
   status: TxStatus;
 }
@@ -33,6 +35,14 @@ export interface DinheiroData {
   monthTarget: { title: string; targetCents: Cents } | null;
   /** Regras de lançamento recorrente (ativas e pausadas). */
   rules: RecurringRule[];
+  /** Leads para vincular receita (não perdidos). */
+  leads: LeadOption[];
+}
+
+export interface LeadOption {
+  id: string;
+  name: string;
+  business: string | null;
 }
 
 /** Dados da tela Dinheiro para o usuário logado (RLS filtra). */
@@ -41,11 +51,11 @@ export async function loadDinheiro(month: ISODate): Promise<DinheiroData> {
   const start = startOfMonth(month);
   const end = endOfMonth(month);
 
-  const [cats, txs, totals, ms, rules] = await Promise.all([
+  const [cats, txs, totals, ms, rules, leads] = await Promise.all([
     supabase.from("categories").select("id, name, kind").eq("archived", false).order("name"),
     supabase
       .from("transactions")
-      .select("id, occurred_on, amount_cents, kind, category_id, description, counterparty, source, status")
+      .select("id, occurred_on, amount_cents, kind, category_id, description, counterparty, lead_id, source, status")
       .gte("occurred_on", start)
       .lte("occurred_on", end)
       .order("occurred_on", { ascending: false })
@@ -63,8 +73,9 @@ export async function loadDinheiro(month: ISODate): Promise<DinheiroData> {
       .eq("metric", "revenue_month")
       .order("position", { ascending: true }),
     supabase.from("recurring_rules").select(RULE_COLS).order("day_of_month").order("description"),
+    supabase.from("crm_leads").select("id, name, business").neq("stage", "perdido").order("name").limit(300),
   ]);
-  for (const r of [cats, txs, totals, ms, rules]) {
+  for (const r of [cats, txs, totals, ms, rules, leads]) {
     if (r.error) throw new Error(`Falha ao ler dados de Dinheiro: ${r.error.message}`);
   }
 
@@ -74,6 +85,7 @@ export async function loadDinheiro(month: ISODate): Promise<DinheiroData> {
     series: lastMonthsSeries(totals.data ?? [], start),
     monthTarget: pickMonthTarget(ms.data ?? [], start, end),
     rules: (rules.data ?? []).map((r) => ({ ...r, amount_cents: toCents(r.amount_cents) }) as RecurringRule),
+    leads: (leads.data ?? []) as LeadOption[],
   };
 }
 

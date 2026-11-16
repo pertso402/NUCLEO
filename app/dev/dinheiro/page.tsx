@@ -37,6 +37,7 @@ const tx = (
   category_id: category ? id(category) : null,
   description,
   counterparty,
+  lead_id: counterparty === "Pizzaria do Zé" ? id(301) : null,
   source: "whatsapp",
   status: "confirmed",
   ...extra,
@@ -71,6 +72,7 @@ const data: DinheiroData = {
   transactions,
   series,
   monthTarget: { title: "R$ 10k de receita", targetCents: 1_000_000 },
+  leads: [{ id: id(301), name: "Zé", business: "Pizzaria do Zé" }, { id: id(302), name: "Ana", business: "Açaí Tropical" }],
   rules: [
     { id: id(201), description: "Aluguel", amount_cents: 120_000, kind: "expense", category_id: id(6), day_of_month: 5, active: true, lead_id: null, last_generated_on: "2026-11-05" },
     { id: id(202), description: "Mensalidade Choppatinhas", amount_cents: 80_000, kind: "income", category_id: id(1), day_of_month: 10, active: true, lead_id: null, last_generated_on: "2026-11-10" },

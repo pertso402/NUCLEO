@@ -6,7 +6,7 @@ import { Chip } from "@/components/ui/Chip";
 import { Money } from "@/components/hud/Money";
 import { cn } from "@/lib/cn";
 import { formatLongDate, formatShortDate } from "@/lib/dates";
-import type { CategoryOption, Transaction } from "@/lib/data/dinheiro";
+import type { CategoryOption, LeadOption, Transaction } from "@/lib/data/dinheiro";
 import { groupByDay } from "@/lib/metrics/money-report";
 import { sumCents } from "@/lib/money";
 import { TransactionEditor } from "./TransactionEditor";
@@ -20,9 +20,19 @@ const SOURCE = {
 } as const;
 
 /** Extrato agrupado por dia. Toque numa linha para editar no lugar. */
-export function Statement({ transactions, categories }: { transactions: Transaction[]; categories: CategoryOption[] }) {
+export function Statement({
+  transactions,
+  categories,
+  leads = [],
+}: {
+  transactions: Transaction[];
+  categories: CategoryOption[];
+  /** Leads para mostrar/vincular o cliente da receita (3.8). */
+  leads?: LeadOption[];
+}) {
   const [editing, setEditing] = useState<string | null>(null);
   const names = new Map(categories.map((c) => [c.id, c.name]));
+  const leadNames = new Map(leads.map((l) => [l.id, l.business ?? l.name]));
   const days = groupByDay(transactions);
 
   return (
@@ -47,11 +57,12 @@ export function Statement({ transactions, categories }: { transactions: Transact
               {items.map((t) => (
                 <li key={t.id} className={editing === t.id ? "p-1" : undefined}>
                   {editing === t.id ? (
-                    <TransactionEditor tx={t} categories={categories} onDone={() => setEditing(null)} />
+                    <TransactionEditor tx={t} categories={categories} leads={leads} onDone={() => setEditing(null)} />
                   ) : (
                     <Row
                       tx={t}
                       categoryName={t.category_id ? names.get(t.category_id) : undefined}
+                      leadName={t.lead_id ? leadNames.get(t.lead_id) : undefined}
                       onEdit={() => setEditing(t.id)}
                     />
                   )}
@@ -65,7 +76,17 @@ export function Statement({ transactions, categories }: { transactions: Transact
   );
 }
 
-function Row({ tx, categoryName, onEdit }: { tx: Transaction; categoryName?: string; onEdit: () => void }) {
+function Row({
+  tx,
+  categoryName,
+  leadName,
+  onEdit,
+}: {
+  tx: Transaction;
+  categoryName?: string;
+  leadName?: string;
+  onEdit: () => void;
+}) {
   const source = SOURCE[tx.source as keyof typeof SOURCE] ?? SOURCE.app;
   const Icon = source.icon;
   const title = tx.description || tx.counterparty || categoryName || (tx.kind === "income" ? "Receita" : "Despesa");
@@ -89,7 +110,12 @@ function Row({ tx, categoryName, onEdit }: { tx: Transaction; categoryName?: str
               revisar
             </Chip>
           )}
-          {sub && <span className="truncate text-xs text-text-2">{sub}</span>}
+          {leadName && (
+            <Chip tone="stage" className="h-5 min-w-0 shrink overflow-hidden text-ellipsis">
+              {leadName}
+            </Chip>
+          )}
+          {sub && sub !== leadName && <span className="truncate text-xs text-text-2">{sub}</span>}
         </span>
       </span>
       <span className={cn("num shrink-0 text-base", tx.status === "pending_review" && "opacity-60")}>
