@@ -56,13 +56,12 @@ export function parseDefaultRates(json: unknown): Record<RateKey, number> {
  * que estiveram na etapa k (entraram nela ou antes dela na janela), quantos chegaram a k+1 ou além.
  * Perdido não conta como avanço. Amostra < 10 → taxa padrão, marcada como estimada.
  */
-export function computeRates(
+/** Contagem crua por etapa na janela: quantos passaram pela etapa e quantos avançaram (base das taxas e das análises). */
+export function stageCounts(
   events: readonly StageEvent[],
-  defaults: Record<RateKey, number>,
   now: Date,
   windowDays = 90,
-  minSample = MIN_SAMPLE,
-): Rates {
+): Record<RateKey, { sample: number; advanced: number }> {
   const since = now.getTime() - windowDays * 86_400_000;
   const span = new Map<string, { min: number; max: number }>();
   for (const e of events) {
@@ -71,16 +70,32 @@ export function computeRates(
     const cur = span.get(e.lead_id);
     span.set(e.lead_id, cur ? { min: Math.min(cur.min, r), max: Math.max(cur.max, r) } : { min: r, max: r });
   }
-  const out = {} as Rates;
+  const out = {} as Record<RateKey, { sample: number; advanced: number }>;
   for (const step of RATE_STEPS) {
     const k = RANK[step.from]!;
     let sample = 0;
     let advanced = 0;
-    for (const s of span.values()) {
-      if (s.min > k || s.max < k) continue; // não passou pela etapa k na janela
+    for (const sp of span.values()) {
+      if (sp.min > k || sp.max < k) continue; // não passou pela etapa k na janela
       sample++;
-      if (s.max > k) advanced++;
+      if (sp.max > k) advanced++;
     }
+    out[step.key] = { sample, advanced };
+  }
+  return out;
+}
+
+export function computeRates(
+  events: readonly StageEvent[],
+  defaults: Record<RateKey, number>,
+  now: Date,
+  windowDays = 90,
+  minSample = MIN_SAMPLE,
+): Rates {
+  const counts = stageCounts(events, now, windowDays);
+  const out = {} as Rates;
+  for (const step of RATE_STEPS) {
+    const { sample, advanced } = counts[step.key];
     const estimated = sample < minSample;
     out[step.key] = { rate: estimated ? defaults[step.key] : advanced / sample, sample, estimated };
   }

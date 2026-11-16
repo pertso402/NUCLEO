@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { GridBackground } from "@/components/hud/GridBackground";
 import { FunnelPanel } from "@/components/pipeline/FunnelPanel";
+import { PipelineAnalytics } from "@/components/pipeline/PipelineAnalytics";
 import { PipelineBoard } from "@/components/pipeline/PipelineBoard";
 import type { FunnelData } from "@/lib/data/funnel";
 import { computeRates, DEFAULT_RATES, reverseFunnel } from "@/lib/metrics/funnel";
@@ -79,6 +80,17 @@ export default async function DevPipelinePage(props: PageProps<"/dev/pipeline">)
         <div className="flex flex-col gap-5">
           <FunnelPanel data={fakeFunnel(typeof sp.funil === "string" ? sp.funil : undefined)} />
           <PipelineBoard leads={sp.vazio === "1" ? [] : LEADS} today={TODAY} nowIso="2026-11-16T15:00:00Z" />
+          <PipelineAnalytics
+            data={{
+              stages: { r1: { sample: 40, advanced: 13 }, r2: { sample: 14, advanced: 6 }, r3: { sample: 6, advanced: 4 }, r4: { sample: 4, advanced: 2 } },
+              lost: { total: 7, items: [ { reason: "preco", count: 3, share: 3 / 7 }, { reason: "sem_resposta", count: 2, share: 2 / 7 }, { reason: "timing", count: 1, share: 1 / 7 }, { reason: "concorrente", count: 1, share: 1 / 7 } ] },
+              origins: [
+                { origin: "indicacao", leads: 6, closed: 3, closeRate: 0.5, mrrCents: 270_000 },
+                { origin: "abordagem_fria", leads: 30, closed: 2, closeRate: 2 / 30, mrrCents: 170_000 },
+                { origin: "instagram", leads: 8, closed: 0, closeRate: 0, mrrCents: 0 },
+              ],
+            }}
+          />
         </div>
       </main>
     </>
