@@ -76,7 +76,13 @@ export interface WeeklyFacts {
   reviewUrl: string;
 }
 
-export type MessageFacts = BriefingFacts | ClosingFacts | WeeklyFacts;
+export interface FollowupFacts {
+  kind: "followups";
+  items: { who: string; text: string; kind: "overdue" | "today" | "stale" }[];
+  pipelineUrl: string;
+}
+
+export type MessageFacts = BriefingFacts | ClosingFacts | WeeklyFacts | FollowupFacts;
 
 function milestoneLines(m: MilestoneFacts): string[] {
   if (m.achieved) return [`🏆 Marco "${m.title}" batido: ${m.current} de ${m.target}.`];
@@ -133,14 +139,27 @@ export function fallbackWeekly(f: WeeklyFacts): string {
   return lines.join("\n");
 }
 
+/** Lembrete de follow-ups (dias úteis 13:30). Lista direta, sem IA: é um checklist. */
+export function fallbackFollowups(f: FollowupFacts): string {
+  const icon = { overdue: "⚠️", today: "•", stale: "💤" } as const;
+  const lines = [`📌 Follow-ups pendentes (${f.items.length})`, ""];
+  for (const i of f.items.slice(0, 10)) lines.push(`${icon[i.kind]} ${i.who}: ${i.text}`);
+  if (f.items.length > 10) lines.push(`… e mais ${f.items.length - 10}`);
+  lines.push("", 'Feito? Responda "fiz o follow-up do <nome>, próximo passo …" ou abra:', f.pipelineUrl);
+  return lines.join("\n");
+}
+
 export function fallbackMessage(f: MessageFacts): string {
-  return f.kind === "briefing" ? fallbackBriefing(f) : f.kind === "closing" ? fallbackClosing(f) : fallbackWeekly(f);
+  if (f.kind === "briefing") return fallbackBriefing(f);
+  if (f.kind === "closing") return fallbackClosing(f);
+  if (f.kind === "weekly") return fallbackWeekly(f);
+  return fallbackFollowups(f);
 }
 
 /** Trechos que o texto final precisa conter, exatamente. */
 export function mustInclude(f: MessageFacts): string[] {
   const out: string[] = [];
-  if (f.milestone) {
+  if (f.kind !== "followups" && f.milestone) {
     out.push(f.milestone.current);
     if (!f.milestone.achieved) out.push(f.milestone.remaining, f.milestone.neededPerDay);
   }
@@ -150,8 +169,10 @@ export function mustInclude(f: MessageFacts): string[] {
   } else if (f.kind === "closing") {
     out.push(`${f.score}`, f.reviewUrl);
     if (f.incomeToday) out.push(f.incomeToday);
-  } else {
+  } else if (f.kind === "weekly") {
     out.push(f.income, f.reviewUrl);
+  } else {
+    out.push(...f.items.map((i) => i.who), f.pipelineUrl);
   }
   return out;
 }

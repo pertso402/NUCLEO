@@ -221,3 +221,28 @@ describe("autenticação do cron", () => {
     expect(isAuthorizedCron(h({ authorization: "Bearer " }))).toBe(false);
   });
 });
+
+describe("lembrete de follow-ups (3.6)", () => {
+  it("lista com ícone por tipo, link e sem IA", async () => {
+    const { fallbackFollowups } = await import("@/lib/briefing/compose");
+    const t = fallbackFollowups({
+      kind: "followups",
+      pipelineUrl: "https://nucleo-beta.vercel.app/pipeline",
+      items: [
+        { who: "Rafa (Hamburgueria Brasa)", text: "mandar vídeo (atrasado desde 13/11)", kind: "overdue" },
+        { who: "Ana", text: "marcar reunião", kind: "today" },
+        { who: "Mercado Bom Preço", text: "proposta parada há 11 dias, cobrar retorno", kind: "stale" },
+      ],
+    });
+    expect(t.split("\n")).toEqual([
+      "📌 Follow-ups pendentes (3)",
+      "",
+      "⚠️ Rafa (Hamburgueria Brasa): mandar vídeo (atrasado desde 13/11)",
+      "• Ana: marcar reunião",
+      "💤 Mercado Bom Preço: proposta parada há 11 dias, cobrar retorno",
+      "",
+      'Feito? Responda "fiz o follow-up do <nome>, próximo passo …" ou abra:',
+      "https://nucleo-beta.vercel.app/pipeline",
+    ]);
+  });
+});

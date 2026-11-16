@@ -57,3 +57,24 @@ describe("quadro do pipeline", () => {
     expect(whatsappLink(null)).toBeNull();
   });
 });
+
+describe("follow-ups (§6.4)", () => {
+  it("atrasados primeiro (mais antigo antes), depois hoje, depois propostas paradas; ignora fechados/perdidos e futuros", async () => {
+    const { classifyFollowups } = await import("@/lib/metrics/pipeline");
+    const now = new Date("2026-11-16T15:00:00Z");
+    const list = classifyFollowups(
+      [
+        lead("hoje", { next_action_on: TODAY }),
+        lead("atrasado2", { next_action_on: "2026-11-13" }),
+        lead("atrasado1", { next_action_on: "2026-11-10" }),
+        lead("futuro", { next_action_on: "2026-11-20" }),
+        lead("parada", { stage: "proposta", next_action_on: "2026-11-25", stage_changed_at: "2026-11-05T12:00:00Z" }),
+        lead("recente", { stage: "proposta", next_action_on: "2026-11-25", stage_changed_at: "2026-11-14T12:00:00Z" }),
+        lead("fechado", { stage: "fechado", next_action_on: "2026-11-01" }),
+      ],
+      TODAY,
+      now,
+    );
+    expect(list.map((f) => `${f.kind}:${f.lead.id}`)).toEqual(["overdue:atrasado1", "overdue:atrasado2", "today:hoje", "stale:parada"]);
+  });
+});

@@ -28,6 +28,8 @@ const SYSTEM = [
  */
 export async function writeMessage(facts: MessageFacts): Promise<{ text: string; source: "openai" | "template"; error?: string }> {
   const fallback = fallbackMessage(facts);
+  // Lembrete de follow-ups é checklist: vai direto, sem reescrever.
+  if (facts.kind === "followups") return { text: fallback, source: "template" };
   const ai = openai();
   if (!ai) return { text: fallback, source: "template", error: "OPENAI_API_KEY ausente" };
   try {

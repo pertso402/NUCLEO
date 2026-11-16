@@ -97,3 +97,31 @@ export function nextBusinessDay(today: ISODate): ISODate {
   while (weekday(d) === 0 || weekday(d) === 6) d = addDays(d, 1);
   return d;
 }
+
+export type FollowupKind = "overdue" | "today" | "stale";
+
+/**
+ * Follow-ups do dia (ARCHITECTURE §6.4): atrasados (próxima ação antes de hoje), de hoje,
+ * e propostas paradas há 7+ dias que ainda não estão nas duas listas. Atrasados primeiro, do mais antigo.
+ */
+export function classifyFollowups<T extends BoardLead>(leads: readonly T[], today: ISODate, now: Date): { lead: T; kind: FollowupKind }[] {
+  const out: { lead: T; kind: FollowupKind }[] = [];
+  for (const l of leads) {
+    if (!isLive(l.stage)) continue;
+    if (l.next_action_on && l.next_action_on < today) out.push({ lead: l, kind: "overdue" });
+    else if (l.next_action_on === today) out.push({ lead: l, kind: "today" });
+    else if (isStaleProposal(l, now)) out.push({ lead: l, kind: "stale" });
+  }
+  const order: Record<FollowupKind, number> = { overdue: 0, today: 1, stale: 2 };
+  return out.sort(
+    (a, b) =>
+      order[a.kind] - order[b.kind] ||
+      (a.lead.next_action_on ?? "").localeCompare(b.lead.next_action_on ?? "") ||
+      a.lead.name.localeCompare(b.lead.name, "pt-BR"),
+  );
+}
+
+/** Dias desde a última mudança de etapa (para "proposta parada há N dias"). */
+export function daysSince(iso: string, now: Date): number {
+  return Math.floor((now.getTime() - new Date(iso).getTime()) / 86_400_000);
+}

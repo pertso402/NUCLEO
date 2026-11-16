@@ -4,6 +4,8 @@ import { MilestoneHero } from "@/components/hud/MilestoneHero";
 import type { HighlightMilestone } from "@/lib/data/comando";
 import type { TodayData } from "@/lib/data/today";
 import { formatLongDate } from "@/lib/dates";
+import type { Followup } from "@/lib/data/followups";
+import { FollowupsCard } from "./FollowupsCard";
 import { PrincipleCard } from "./PrincipleCard";
 import { RevenueTasks } from "./RevenueTasks";
 import { ScoreRing } from "./ScoreRing";
@@ -17,9 +19,21 @@ function greeting(hour: number): string {
 
 /**
  * Comando (ARCHITECTURE §7.1, DESIGN §9). Mobile: topo com score · hero · faixa Hoje ·
- * movem faturamento · princípio. Desktop: hero em 7 colunas e o resto em 5.
+ * movem faturamento · follow-ups · princípio. Desktop: hero em 7 colunas e o resto em 5.
  */
-export function ComandoView({ highlight, today, hour }: { highlight: HighlightMilestone | null; today: TodayData; hour: number }) {
+export function ComandoView({
+  highlight,
+  today,
+  hour,
+  followups,
+  nowIso,
+}: {
+  highlight: HighlightMilestone | null;
+  today: TodayData;
+  hour: number;
+  followups: Followup[];
+  nowIso: string;
+}) {
   return (
     <div className="grid gap-4 lg:grid-cols-12">
       <header className="flex items-center justify-between gap-3 lg:col-span-12">
@@ -55,6 +69,7 @@ export function ComandoView({ highlight, today, hour }: { highlight: HighlightMi
       <div className="flex flex-col gap-4 lg:col-span-5">
         <TodayStrip data={today} />
         <RevenueTasks tasks={today.revenueTasks} doneToday={today.revenueDoneToday} today={today.today} />
+        <FollowupsCard items={followups} today={today.today} nowIso={nowIso} />
         <PrincipleCard principle={today.principle} />
       </div>
     </div>

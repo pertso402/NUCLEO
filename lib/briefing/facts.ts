@@ -4,9 +4,11 @@ import { loadHighlightMilestone, type HighlightMilestone } from "@/lib/data/mile
 import { loadToday } from "@/lib/data/today";
 import { addDays, formatLongDate, startOfWeek, todayISO, weekday } from "@/lib/dates";
 import { formatBRL, toCents } from "@/lib/money";
+import { loadFollowups } from "@/lib/data/followups";
 import { loadWeekNumbers } from "@/lib/data/review";
+import { daysSince } from "@/lib/metrics/pipeline";
 import { weekLabel } from "@/lib/metrics/week";
-import type { BriefingFacts, ClosingFacts, MilestoneFacts, WeeklyFacts } from "./compose";
+import type { BriefingFacts, ClosingFacts, FollowupFacts, MilestoneFacts, WeeklyFacts } from "./compose";
 
 const brl = (c: number) => formatBRL(c, { cents: false });
 
@@ -140,4 +142,23 @@ export async function loadWeeklyFacts({ supabase, userId, now }: Ctx, reviewUrl:
     reviewUrl,
   };
   return { facts, weekStart, numbers: cur };
+}
+
+/** Fatos do lembrete de follow-ups (atrasados, de hoje e propostas paradas). */
+export async function loadFollowupFacts({ supabase, userId, now }: Ctx, pipelineUrl: string): Promise<FollowupFacts> {
+  const list = await loadFollowups(now, { supabase, userId });
+  return {
+    kind: "followups",
+    pipelineUrl,
+    items: list.map(({ lead, kind }) => ({
+      who: lead.business ? `${lead.name} (${lead.business})` : lead.name,
+      kind,
+      text:
+        kind === "stale"
+          ? `proposta parada há ${daysSince(lead.stage_changed_at, now)} dias, cobrar retorno`
+          : `${(lead.next_action ?? "fazer follow-up").toLowerCase()}${
+              kind === "overdue" && lead.next_action_on ? ` (atrasado desde ${lead.next_action_on.slice(8, 10)}/${lead.next_action_on.slice(5, 7)})` : ""
+            }`,
+    })),
+  };
 }

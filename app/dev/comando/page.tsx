@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { ComandoView } from "@/components/command/ComandoView";
 import { GridBackground } from "@/components/hud/GridBackground";
 import { MilestoneHero } from "@/components/hud/MilestoneHero";
+import type { Lead } from "@/lib/data/pipeline";
 import type { TodayData } from "@/lib/data/today";
 import { computePace } from "@/lib/metrics/pace";
 import { computeScore } from "@/lib/metrics/score";
@@ -23,6 +24,28 @@ const states = [
 ];
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+
+function fakeLead(n: number, name: string, business: string | null, next: string, on: string, phone: string | null): Lead {
+  return {
+    id: id(n),
+    name,
+    business,
+    phone,
+    segment: null,
+    origin: "abordagem_fria",
+    stage: "conversou",
+    monthly_value_cents: null,
+    setup_value_cents: null,
+    next_action: next,
+    next_action_on: on,
+    lost_reason: null,
+    contract_status: null,
+    stage_changed_at: "2026-11-12T12:00:00Z",
+    closed_at: null,
+    notes: null,
+    created_at: "2026-11-01T12:00:00Z",
+  };
+}
 
 function fakeToday(empty: boolean): TodayData {
   const input = empty
@@ -69,6 +92,16 @@ export default async function DevComandoPage(props: PageProps<"/dev/comando">) {
             }}
             today={fakeToday(empty)}
             hour={15}
+            nowIso="2026-11-16T15:00:00Z"
+            followups={
+              empty
+                ? []
+                : [
+                    { kind: "overdue", lead: fakeLead(21, "Rafa", "Hamburgueria Brasa", "Mandar vídeo do cardápio", "2026-11-13", "11987654321") },
+                    { kind: "today", lead: fakeLead(22, "Ana", "Açaí Tropical", "Marcar reunião", "2026-11-16", null) },
+                    { kind: "stale", lead: { ...fakeLead(23, "Mercado Bom Preço", null, "Cobrar retorno", "2026-11-20", null), stage: "proposta", stage_changed_at: "2026-11-05T12:00:00Z" } },
+                  ]
+            }
           />
         </main>
       </>

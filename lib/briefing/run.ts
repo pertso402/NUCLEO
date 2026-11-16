@@ -7,14 +7,14 @@ import { sendText, whatsappEnv } from "@/lib/whatsapp/evolution";
 import { REPLY_MARK } from "@/lib/whatsapp/webhook";
 import { todayISO, weekday } from "@/lib/dates";
 import type { MessageFacts } from "./compose";
-import { loadBriefingFacts, loadClosingFacts, loadWeeklyFacts } from "./facts";
+import { loadBriefingFacts, loadClosingFacts, loadFollowupFacts, loadWeeklyFacts } from "./facts";
 import { writeMessage } from "./writer";
 
 /**
  * Executa uma rotina agendada (Vercel Cron → GET; chamada manual → GET/POST com x-nucleo-token).
  * `?dry=1`: só monta e devolve o texto (não envia nem grava). `?force=1`: ignora "não é dia útil".
  */
-export async function runScheduled(kind: "briefing" | "closing" | "weekly", request: NextRequest) {
+export async function runScheduled(kind: "briefing" | "closing" | "weekly" | "followups", request: NextRequest) {
   if (!isAuthorizedCron(request.headers)) {
     return NextResponse.json({ error: "não autorizado" }, { status: 401 });
   }
@@ -29,7 +29,7 @@ export async function runScheduled(kind: "briefing" | "closing" | "weekly", requ
     const userId = await resolveOwnerId(supabase);
     const ctx = { supabase, userId, now };
 
-    if (kind === "briefing" && !force) {
+    if ((kind === "briefing" || kind === "followups") && !force) {
       const { data } = await supabase.from("settings").select("workdays").eq("user_id", userId).maybeSingle();
       const workdays = (data?.workdays as number[] | undefined) ?? [1, 2, 3, 4, 5];
       if (!workdays.includes(weekday(today))) {
@@ -42,7 +42,12 @@ export async function runScheduled(kind: "briefing" | "closing" | "weekly", requ
     }
 
     let facts: MessageFacts;
-    if (kind === "briefing") facts = await loadBriefingFacts(ctx);
+    if (kind === "followups") {
+      facts = await loadFollowupFacts(ctx, `${url.origin}/pipeline`);
+      if (facts.kind === "followups" && facts.items.length === 0) {
+        return NextResponse.json({ ok: true, kind, skipped: "nenhum follow-up pendente" });
+      }
+    } else if (kind === "briefing") facts = await loadBriefingFacts(ctx);
     else if (kind === "closing") facts = await loadClosingFacts(ctx, `${url.origin}/revisao`);
     else {
       const w = await loadWeeklyFacts(ctx, `${url.origin}/revisao?aba=semana`);

@@ -32,7 +32,18 @@ type Move = { id: string; stage: LeadStage };
  * Pipeline (ARCHITECTURE §7.6): kanban por etapa. Desktop: arrastar o card entre colunas.
  * Mobile: abas por etapa e "Avançar" no card. Toque no card abre o detalhe.
  */
-export function PipelineBoard({ leads, today, nowIso }: { leads: Lead[]; today: string; nowIso: string }) {
+export function PipelineBoard({
+  leads,
+  today,
+  nowIso,
+  initialOpenId = null,
+}: {
+  leads: Lead[];
+  today: string;
+  nowIso: string;
+  /** Abre o detalhe deste lead ao carregar (link "/pipeline?lead=" do Comando). */
+  initialOpenId?: string | null;
+}) {
   const [, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [mobileStage, setMobileStage] = useState<LeadStage>(() => {
@@ -41,7 +52,9 @@ export function PipelineBoard({ leads, today, nowIso }: { leads: Lead[]; today: 
     );
     return firstWithItems ?? "abordado";
   });
-  const [openId, setOpenId] = useState<string | "new" | null>(null);
+  const [openId, setOpenId] = useState<string | "new" | null>(() =>
+    initialOpenId && leads.some((l) => l.id === initialOpenId) ? initialOpenId : null,
+  );
   const [askLost, setAskLost] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<LeadStage | null>(null);
 
