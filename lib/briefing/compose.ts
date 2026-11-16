@@ -142,7 +142,7 @@ export function mustInclude(f: MessageFacts): string[] {
   const out: string[] = [];
   if (f.milestone) {
     out.push(f.milestone.current);
-    if (!f.milestone.achieved) out.push(f.milestone.remaining);
+    if (!f.milestone.achieved) out.push(f.milestone.remaining, f.milestone.neededPerDay);
   }
   if (f.kind === "briefing") {
     // títulos sem o prazo entre parênteses

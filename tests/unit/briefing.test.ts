@@ -149,12 +149,12 @@ describe("revisão semanal", () => {
 
 describe("texto da IA só passa se mantiver os fatos", () => {
   it("mustInclude: valores do marco, títulos das tarefas (sem prazo), score, link e entrada", () => {
-    expect(mustInclude(BRIEF)).toEqual(["R$ 6.200", "R$ 3.800", "Cobrar parcela do Choppatinhas", "Mandar proposta pra Gelato"]);
-    expect(mustInclude(CLOSE)).toEqual(["R$ 6.200", "R$ 3.800", "64", "https://nucleo-beta.vercel.app/revisao", "R$ 1.500"]);
+    expect(mustInclude(BRIEF)).toEqual(["R$ 6.200", "R$ 3.800", "R$ 346", "Cobrar parcela do Choppatinhas", "Mandar proposta pra Gelato"]);
+    expect(mustInclude(CLOSE)).toEqual(["R$ 6.200", "R$ 3.800", "R$ 346", "64", "https://nucleo-beta.vercel.app/revisao", "R$ 1.500"]);
   });
 
   it("aceita texto com tudo; recusa se mudou um valor, esqueceu uma tarefa ou ficou enorme", () => {
-    const good = "Bom dia! R$ 6.200 de 10k, faltam R$ 3.800.\n1. Cobrar parcela do Choppatinhas\n2. Mandar proposta pra Gelato";
+    const good = "Bom dia! R$ 6.200 de 10k, faltam R$ 3.800 (R$ 346/dia útil).\n1. Cobrar parcela do Choppatinhas\n2. Mandar proposta pra Gelato";
     expect(acceptGenerated(good, BRIEF)).toBe(true);
     expect(acceptGenerated(good.replace("R$ 3.800", "R$ 3,8 mil"), BRIEF)).toBe(false);
     expect(acceptGenerated(good.replace("2. Mandar proposta pra Gelato", ""), BRIEF)).toBe(false);
