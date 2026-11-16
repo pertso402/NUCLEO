@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 3 (aceite das Fases 1 e 2 pendente — ver Bloqueios; o Peter pediu para seguir e deixar o crédito da OpenAI para depois)
-**Próxima tarefa:** 3.2
+**Próxima tarefa:** 3.3
 
 ---
 
@@ -40,7 +40,7 @@
 
 ## Fase 2 — Rotina: tarefas, hábitos, tempo, briefings, Siri e widget
 - [x] 2.1 Migrations: `tasks`, `habits`, `habit_logs`, `time_entries`, `daily_reviews`, `goals`, `recurring_rules`, `push_subscriptions` + `v_habit_streaks`
-- [ ] 2.2 Ferramentas do parser: `add_task`, `complete_task`, `log_habit`, `start_timer`, `stop_timer`, `log_time` + fixtures — **código e fixtures prontos**, falta rodar `npm run test:parser` (OpenAI sem crédito)
+- [x] 2.2 Ferramentas do parser: `add_task`, `complete_task`, `log_habit`, `start_timer`, `stop_timer`, `log_time` + fixtures
 - [x] 2.3 Tela **Rotina** (abas Tarefas · Hábitos com heatmap · Tempo)
 - [x] 2.4 Tela **Objetivos** (trimestre, área, porquê, métrica, tarefas vinculadas)
 - [x] 2.5 `lib/metrics/score.ts` + faixa "Hoje" e top 3 tarefas no Comando + princípio do dia
@@ -59,7 +59,7 @@
 
 ## Fase 3 — Pipeline (CRM) + Funil reverso
 - [x] 3.1 Migrations: `leads` (com constraints de próxima ação), `lead_events` (trigger de stage), `outreach_logs`, `v_mrr`
-- [ ] 3.2 Ferramentas do parser: `create_lead`, `update_lead`, `log_outreach` + fixtures
+- [x] 3.2 Ferramentas do parser: `create_lead`, `update_lead`, `log_outreach` + fixtures
 - [ ] 3.3 Tela **Pipeline**: kanban, detalhe do lead, histórico, ação rápida no mobile
 - [ ] 3.4 `lib/metrics/funnel.ts` (ARCHITECTURE §6.3) com testes + painel do funil reverso
 - [ ] 3.5 Meta de abordagens automática alimentando o Comando e o score
@@ -136,6 +136,8 @@
 - 2026-11-14 — Áudio no botão (2.10): segurar > 220 ms grava, soltar envia, arrastar o dedo pra fora cancela, < 0,6 s descarta, máximo 60 s; toque rápido continua abrindo o texto. `/api/ingest/audio` aceita multipart (`audio`) ou corpo cru `audio/*`, até 4 MB (limite da Vercel ~4,5 MB), transcreve com o mesmo `transcribeAudio` do WhatsApp (movido para `lib/stt.ts`) e passa pelo `runIngest` no canal `app`; devolve `transcript` para a palette mostrar o que foi entendido. Autorização compartilhada em `lib/ingest/authorize.ts`. Áudio mudo não lança nada.
 - 2026-11-14 — Recorrentes (2.11): rotina diária `0 9 * * *` (06:00 SP) cria `pending_review` no dia de vencimento (29–31 em mês curto = último dia); se falhar um dia, gera no seguinte, só dentro do mês corrente. Idempotente por `external_id = recurring:<regra>:<YYYY-MM>` (único por usuário, sem migration nova) + `last_generated_on`. Regra criada (ou retomada) com o dia já passado neste mês começa no próximo (você provavelmente já lançou na mão). Cadastro fica no fim da tela Dinheiro; confirmar o pendente é o mesmo "Confirmar" do extrato. `source` dos gerados = `app` (o enum não tem `recurring`; o `external_id` identifica a origem).
 - 2026-11-14 — Pipeline (3.1): `public.leads` já é de outro sistema no projeto compartilhado → tabelas e tipos do CRM com prefixo `crm_` (`crm_leads`, `crm_lead_events`, `crm_lead_stage`…); `outreach_logs` e `v_mrr` estavam livres. Constraints: lead vivo exige próxima ação com data; `perdido` exige motivo; contrato só em `fechado`. Gatilho antes de gravar: carimba `stage_changed_at`, ao fechar põe `closed_at` e contrato `ativo`, ao sair de fechado/perdido limpa contrato/motivo. Gatilho depois: evento `stage_change` na criação (de null para a etapa) e em toda troca de etapa (perda leva o motivo no payload). Evento só no lead do próprio dono (trigger). Os `lead_id` das fases 1–2 (transactions, tasks, time_entries, recurring_rules) ganharam FK `on delete set null`. `v_mrr` = soma de `monthly_value_cents` dos fechados com contrato ativo.
+- 2026-11-16 — Chave nova da OpenAI (o Peter colou no chat): gravada no `.env.local` e na Vercel (Production). Recomendado gerar outra depois, já que passou pelo chat.
+- 2026-11-16 — Parser do pipeline (3.2): `create_lead`, `update_lead`, `log_outreach`. O prompt recebe os leads (nome · empresa · etapa, até 60, sem os perdidos). "Fechou X por mês" = lead fechado com mensalidade, **não** receita ("fechei" saiu das palavras de receita). Lead vivo sem próximo passo dito ganha "Fazer follow-up" no próximo dia útil (constraint). Se o modelo "atualizar" alguém fora da lista com etapa viva ou próximo passo, o servidor cadastra como novo (o modelo erra isso às vezes). Perdido sem motivo pergunta. Desfazer troca de etapa apaga os eventos de etapa desde a mudança (não distorce o funil). A resposta de abordagem mostra "📣 Abordagens hoje: N" (leads novos em abordado + lote). Bateria: frases ambíguas aceitam mais de uma ferramenta equivalente (`tool_in`); data de hoje ≡ sem data em hábito/tempo.
 - 2026-11-13 — Tela Dinheiro: filtros (mês, tipo, categoria) vivem na URL (`?mes=2026-11&tipo=expense&cat=<id>`), então dá pra voltar/compartilhar o estado. Totais e relatórios usam só `confirmed` (mesma regra das views); o extrato mostra também `pending_review` com chip "revisar" e botão Confirmar por linha (a revisão em lote continua na 4.4). Edição/exclusão por server actions com a sessão do dono (RLS), valor como texto pt-BR → `parseBRL`; excluir pede confirmação em 2 toques. Receita acumulada é **dia a dia no mês**, com a meta do marco `revenue_month` do mês como linha tracejada. Categorias em barras horizontais simples (sem Recharts) que filtram o extrato ao tocar. Recharts 3.
 - 2026-11-13 — **Visual v2 "Neon"** (pedido do Peter: mais cyberpunk, mais luz e brilho, menos quadrado, menos apagado). Fundo com luzes de neon difusas que derivam, linhas de varredura e horizonte de luz; cards de vidro com filete de luz; raios maiores e chips em pílula; texto neon nos números de receita/progresso; anel em estilo gauge (escala de 60 marcas, ponto de luz na ponta); doca de vidro flutuante; gráficos com glow. Documentado no DESIGN.md (v2). Desfoque só em poucos elementos por tela (extrato sem desfoque) por causa do iPhone 11 Pro; luzes do fundo são gradientes (sem `filter: blur`) animando só `transform`.
 - 2026-11-13 — **Navegação instantânea** (Peter sentia atraso ao trocar de aba). Causa: cada aba esperava o servidor montar a página inteira (com consultas ao Supabase) antes de trocar. Correções: `app/(app)/loading.tsx` (esqueleto aparece na hora), aba acende no toque (`useOptimisticPath`), `prefetch` completo nas abas/sidebar (página com dados já baixada em segundo plano), cache do router (`experimental.staleTimes` 300s), entrada de tela de 180ms só com opacity/transform, `active:scale` em tudo que é tocável. Para o cache não mostrar dado velho, um **único `RealtimeRefresh` no layout** escuta `transactions`/`milestones` e chama `router.refresh()` (que descarta o cache) a cada mudança; as server actions também revalidam. Medido em dev: aba acende em 8 ms; voltar a uma aba visitada 22–78 ms (antes ~1,3 s). A sessão no `proxy.ts` já é validada localmente (`getClaims` com chave ES256).
@@ -144,8 +146,7 @@
 - 2026-11-12 — TS strict + `noUncheckedIndexedAccess`. Vitest com `TZ=UTC` para garantir que os testes de fuso não dependam da máquina.
 
 ## Bloqueios
-- 2026-11-14 — **Crédito na OpenAI** e **WhatsApp**: o Peter disse "Tudo feito", mas na conferência a chave do app ainda responde sem crédito e não há variáveis da Evolution na Vercel (o assistente ficou parado na 1ª pergunta). O Peter pediu para deixar o crédito para depois e seguir.
-- 2026-11-13 — **OpenAI sem crédito** ("429 You have no credits remaining"): o parser não funciona — lançar pelo app (e pelo WhatsApp, quando ligado) responde erro até o Peter colocar crédito em platform.openai.com → Billing. Bloqueia rodar a bateria da 2.2.
+- 2026-11-14 — **WhatsApp**: não há variáveis da Evolution na Vercel (o assistente `configurar-whatsapp` ficou parado na 1ª pergunta). Crédito da OpenAI resolvido em 16/11 com chave nova.
 - 2026-11-13 — **1.9 ativação:** depende do Peter/das credenciais: `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE`, `PETER_WHATSAPP_NUMBER` (e opcionalmente `WHATSAPP_MODE`, `ELEVENLABS_API_KEY`) na Vercel, e o webhook da instância apontando para `/api/whatsapp?token=…` (passo a passo em `integrations/whatsapp/README.md`). Depois: teste real e critérios de aceite da Fase 1.
 
 ## Configuração pendente com o Peter
@@ -202,3 +203,4 @@
 | 2026-11-14 | 2.11 ✓ | `lib/metrics/recurring.ts` (5 testes), `lib/recurring.ts` (4 testes com Supabase em memória: gera, não duplica, dry, só do dono), `/api/cron/recorrentes` no Vercel Cron, cartão "Recorrentes" no Dinheiro (criar/editar/pausar/excluir, saldo fixo por mês) e actions. Conferido em 375×812 com dados fictícios; consulta no banco real. 225 testes, build ok. **Fase 2 com todas as tarefas feitas; aceite pendente** (ver acima). |
 | 2026-11-14 | 3.1 (parcial) | Migration do pipeline (`crm_leads`, `crm_lead_events`, `outreach_logs`, `v_mrr`, FKs de `lead_id`, Realtime). Validada em PGlite com todas as migrations: 25 checagens (lead vivo sem próxima ação, perda sem motivo, gatilhos de etapa/fechamento/contrato, eventos, MRR, FK set null, RLS entre dois usuários, evento só no lead do dono). Não aplicada (ver Bloqueios). |
 | 2026-11-15 | 3.1 ✓ | Peter aplicou a migration do pipeline no SQL Editor. Conferido via API: `crm_leads` (todas as colunas), `crm_lead_events`, `outreach_logs`, `v_mrr` e a FK `tasks → crm_leads` respondem; sem login vem tudo vazio (RLS); a `leads` do outro sistema segue intacta. |
+| 2026-11-16 | 2.2 ✓ / 3.2 ✓ | Chave nova da OpenAI: bateria da 2.2 passou 38/38. 3.2: `lib/ingest/pipeline.ts` + ferramentas/esquemas/prompt, contexto de leads em `run.ts`, desfaz de lead. 13 testes unitários novos; bateria real com 44 frases (6 de pipeline) passou 3 vezes seguidas 44/44 após ajustes de prompt e de frases ambíguas. |

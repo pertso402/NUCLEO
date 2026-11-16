@@ -278,12 +278,17 @@
       "text": "o Carlos da sorveteria pediu orçamento, manda segunda",
       "expect": [
         {
-          "tool": "add_task",
-          "title_includes": "or",
-          "due_on": "2026-11-16",
-          "moves_revenue": true
+          "tool": "create_lead",
+          "tool_in": [
+            "create_lead",
+            "update_lead",
+            "add_task"
+          ],
+          "next_action_on": "2026-11-16",
+          "due_on": "2026-11-16"
         }
-      ]
+      ],
+      "_comment": "Ambígua de verdade: lead novo em proposta (preferido na Fase 3) ou tarefa de mandar orçamento. Os dois resolvem; o que importa é o prazo de segunda."
     },
     {
       "text": "preciso renovar a CNH",
@@ -413,6 +418,72 @@
           "date": null
         }
       ]
+    },
+    {
+      "text": "abordei mais 5 hoje",
+      "expect": [
+        {
+          "tool": "log_outreach",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "text": "mandei mensagem pra 8 restaurantes no instagram",
+      "expect": [
+        {
+          "tool": "log_outreach",
+          "count": 8,
+          "channel": "instagram"
+        }
+      ]
+    },
+    {
+      "text": "conheci o João da Padaria Pão Quente, ficou de pensar, volto a falar quinta",
+      "expect": [
+        {
+          "tool": "create_lead",
+          "tool_in": [
+            "create_lead",
+            "update_lead"
+          ],
+          "next_action_on": "2026-11-19"
+        }
+      ],
+      "_comment": "Às vezes o modelo registra pelo nome da padaria (update_lead → o servidor cadastra como novo). Os dois servem."
+    },
+    {
+      "text": "a Pizzaria Forno fechou, 800 por mês",
+      "expect": [
+        {
+          "tool": "update_lead",
+          "lead_ref_includes": "forno",
+          "stage": "fechado",
+          "monthly_cents": 80000
+        }
+      ]
+    },
+    {
+      "text": "o Mercado Bom Preço não quis, achou caro",
+      "expect": [
+        {
+          "tool": "update_lead",
+          "lead_ref_includes": "bom pre",
+          "stage": "perdido",
+          "lost_reason": "preco"
+        }
+      ]
+    },
+    {
+      "text": "marquei reunião com a Ana do açaí pra terça",
+      "expect": [
+        {
+          "tool": "update_lead",
+          "lead_ref_includes": "a",
+          "stage": "reuniao",
+          "next_action_on": "2026-11-17"
+        }
+      ]
     }
   ],
   "context": {
@@ -431,7 +502,12 @@
     "openTimer": {
       "label": "site",
       "minutes": 30
-    }
+    },
+    "leads": [
+      "Ana · Açaí Tropical · conversou",
+      "Mercado Bom Preço · proposta",
+      "Pizzaria Forno · reuniao"
+    ]
   },
   "_context_comment": "Rotina que o parser enxerga em todos os casos (hábitos, tarefas abertas, objetivos, timer rodando)."
 }

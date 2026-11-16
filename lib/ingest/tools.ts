@@ -147,6 +147,86 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "create_lead",
+      strict: true,
+      description: "Cadastra um lead novo no pipeline (alguém que ele abordou ou que pode virar cliente). Só para quem NÃO está na lista de leads.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        required: ["name", "business", "origin", "stage", "next_action", "next_action_on"],
+        properties: {
+          name: { type: "string", description: "Nome da pessoa (ou da empresa, se não houver nome)" },
+          business: { ...nullableString, description: "Empresa/negócio (ex.: 'Padaria Pão Quente')" },
+          origin: {
+            type: ["string", "null"],
+            enum: ["indicacao", "abordagem_fria", "instagram", "evento", "cliente_atual", "outro", null],
+            description: "Como chegou; null se não disse",
+          },
+          stage: {
+            type: "string",
+            enum: ["abordado", "conversou", "reuniao", "proposta"],
+            description: "abordado = só abordou; conversou = teve conversa; reuniao = marcou/teve reunião; proposta = pediu/recebeu proposta",
+          },
+          next_action: { ...nullableString, description: "Próximo passo curto ('mandar proposta', 'ligar de novo')" },
+          next_action_on: { ...nullableString, description: "YYYY-MM-DD do próximo passo; null se não disse" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_lead",
+      strict: true,
+      description: "Atualiza um lead da lista: muda etapa, próximo passo, valor da mensalidade, perda ou anota algo.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        required: ["lead_ref", "stage", "next_action", "next_action_on", "lost_reason", "monthly_value", "note"],
+        properties: {
+          lead_ref: { type: "string", description: "Nome ou empresa do lead, como está na lista" },
+          stage: {
+            type: ["string", "null"],
+            enum: ["abordado", "conversou", "reuniao", "proposta", "fechado", "perdido", null],
+            description: "Nova etapa; null se não mudou",
+          },
+          next_action: { ...nullableString, description: "Novo próximo passo; null se não mudou" },
+          next_action_on: { ...nullableString, description: "YYYY-MM-DD do próximo passo; null se não disse" },
+          lost_reason: {
+            type: ["string", "null"],
+            enum: ["preco", "timing", "sem_resposta", "concorrente", "nao_viu_valor", "outro", null],
+            description: "Só quando stage = perdido",
+          },
+          monthly_value: { ...nullableString, description: "Mensalidade em reais como dita ('800', '1,2 mil'); null se não disse" },
+          note: { ...nullableString, description: "Anotação livre sobre o lead; null se não houver" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "log_outreach",
+      strict: true,
+      description: "Registra abordagens feitas sem cadastrar cada pessoa ('abordei mais 5', 'mandei 10 mensagens de prospecção').",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        required: ["count", "channel"],
+        properties: {
+          count: { type: "integer", description: "Quantas abordagens" },
+          channel: {
+            type: ["string", "null"],
+            enum: ["whatsapp", "presencial", "instagram", "ligacao", null],
+            description: "Canal, se disse",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "undo_last",
       strict: true,
       description: "Desfaz o último lançamento registrado ('desfaz', 'apaga o último', 'errei').",
@@ -207,6 +287,36 @@ export const ToolCallSchema = z.discriminatedUnion("name", [
   z.object({
     name: z.literal("log_time"),
     args: z.object({ minutes: z.number().int().min(1).max(1440), label: z.string().trim().min(1), date: isoDate.nullable() }),
+  }),
+  z.object({
+    name: z.literal("create_lead"),
+    args: z.object({
+      name: z.string().trim().min(1).max(120),
+      business: z.string().trim().max(120).nullable(),
+      origin: z.enum(["indicacao", "abordagem_fria", "instagram", "evento", "cliente_atual", "outro"]).nullable(),
+      stage: z.enum(["abordado", "conversou", "reuniao", "proposta"]),
+      next_action: z.string().trim().max(200).nullable(),
+      next_action_on: isoDate.nullable(),
+    }),
+  }),
+  z.object({
+    name: z.literal("update_lead"),
+    args: z.object({
+      lead_ref: z.string().trim().min(1),
+      stage: z.enum(["abordado", "conversou", "reuniao", "proposta", "fechado", "perdido"]).nullable(),
+      next_action: z.string().trim().max(200).nullable(),
+      next_action_on: isoDate.nullable(),
+      lost_reason: z.enum(["preco", "timing", "sem_resposta", "concorrente", "nao_viu_valor", "outro"]).nullable(),
+      monthly_value: z.string().trim().max(40).nullable(),
+      note: z.string().trim().max(1000).nullable(),
+    }),
+  }),
+  z.object({
+    name: z.literal("log_outreach"),
+    args: z.object({
+      count: z.number().int().min(1).max(200),
+      channel: z.enum(["whatsapp", "presencial", "instagram", "ligacao"]).nullable(),
+    }),
   }),
   z.object({ name: z.literal("undo_last"), args: z.object({}) }),
   z.object({ name: z.literal("ask_clarification"), args: z.object({ question: z.string().min(1) }) }),

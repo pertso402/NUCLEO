@@ -25,6 +25,7 @@ const PREFIXES: [string, ReplyLineKind][] = [
   ["🏆", "achieved"],
   ["❓", "question"],
   ["📊", "summary"],
+  ["📣", "summary"],
   ["🧾", "category"],
   ["⚠️", "error"],
   ["↩️", "undone"],

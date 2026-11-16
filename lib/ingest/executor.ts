@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatBRL, parseBRL, toCents, type Cents } from "@/lib/money";
 import { todayISO, type ISODate } from "@/lib/dates";
 import { loadHighlightMilestone, syncAchievements } from "@/lib/data/milestone";
+import { createLead, logOutreach, outreachToday, updateLead } from "./pipeline";
 import { addTask, completeTask, logHabit, logTime, startTimer, stopTimer } from "./routine";
 import type { ToolCall } from "./tools";
 
@@ -12,15 +13,26 @@ export interface Category {
   kind: "income" | "expense";
 }
 
+export interface LeadLite {
+  id: string;
+  name: string;
+  business: string | null;
+  stage: "abordado" | "conversou" | "reuniao" | "proposta" | "fechado" | "perdido";
+  next_action: string | null;
+  next_action_on: string | null;
+}
+
 /** Estado da rotina usado pelo parser e pelas ferramentas (muda durante a mensagem). */
 export interface RoutineState {
+  /** Leads do pipeline (vivos e fechados recentes). */
+  leads: LeadLite[];
   habits: { id: string; name: string }[];
   openTasks: { id: string; title: string; due_on: string | null; moves_revenue: boolean }[];
   goals: { id: string; title: string }[];
   openTimer: { id: string; label: string | null; started_at: string } | null;
 }
 
-export const EMPTY_ROUTINE: RoutineState = { habits: [], openTasks: [], goals: [], openTimer: null };
+export const EMPTY_ROUTINE: RoutineState = { leads: [], habits: [], openTasks: [], goals: [], openTimer: null };
 
 export interface ExecContext {
   supabase: SupabaseClient; // admin (service_role): SEMPRE filtrar/gravar com userId
@@ -33,7 +45,14 @@ export interface ExecContext {
 }
 
 /** Tabelas onde o ingest cria linhas (o "desfaz" apaga). */
-export type CreatedTable = "transactions" | "tasks" | "habit_logs" | "time_entries";
+export type CreatedTable =
+  | "transactions"
+  | "tasks"
+  | "habit_logs"
+  | "time_entries"
+  | "crm_leads"
+  | "crm_lead_events"
+  | "outreach_logs";
 
 export interface CreatedRef {
   table: CreatedTable;
@@ -42,9 +61,11 @@ export interface CreatedRef {
 
 /** Linha alterada pelo ingest, com os valores de antes (o "desfaz" restaura). */
 export interface UpdatedRef {
-  table: "tasks" | "time_entries";
+  table: "tasks" | "time_entries" | "crm_leads";
   id: string;
   before: Record<string, unknown>;
+  /** crm_leads: eventos de etapa a partir daqui são apagados no desfaz (não distorcem o funil). */
+  since?: string;
 }
 
 export interface ActionOutcome {
@@ -54,6 +75,8 @@ export interface ActionOutcome {
   line: string;
   created?: CreatedRef[];
   updated?: UpdatedRef[];
+  /** Entrou abordagem (lead novo em "abordado" ou log em lote): a resposta mostra o total do dia. */
+  outreachAdded?: boolean;
   incomeAdded?: boolean;
   clarification?: boolean;
   undone?: boolean;
@@ -201,7 +224,15 @@ async function undoLast(ctx: ExecContext): Promise<ActionOutcome> {
   // (ex.: timer novo sai antes de reabrir o anterior — só pode haver 1 aberto).
   const created = (Array.isArray(target.result.created) ? target.result.created : []) as CreatedRef[];
   const updated = (Array.isArray(target.result.updated) ? target.result.updated : []) as UpdatedRef[];
-  const UNDO_TABLES: readonly CreatedTable[] = ["transactions", "tasks", "habit_logs", "time_entries"];
+  const UNDO_TABLES: readonly CreatedTable[] = [
+    "transactions",
+    "tasks",
+    "habit_logs",
+    "time_entries",
+    "crm_lead_events",
+    "outreach_logs",
+    "crm_leads",
+  ];
   for (const table of UNDO_TABLES) {
     const ids = created.filter((c) => c.table === table).map((c) => c.id);
     if (!ids.length) continue;
@@ -209,9 +240,19 @@ async function undoLast(ctx: ExecContext): Promise<ActionOutcome> {
     if (delError) throw new Error(`Falha ao desfazer: ${delError.message}`);
   }
   for (const u of updated) {
-    if (u.table !== "tasks" && u.table !== "time_entries") continue;
+    if (u.table !== "tasks" && u.table !== "time_entries" && u.table !== "crm_leads") continue;
     const { error: upErr } = await ctx.supabase.from(u.table).update(u.before).eq("id", u.id).eq("user_id", ctx.userId);
     if (upErr) throw new Error(`Falha ao desfazer: ${upErr.message}`);
+    if (u.table === "crm_leads" && u.since) {
+      // a troca de etapa desfeita (e a volta que o gatilho acabou de gravar) não contam no funil
+      await ctx.supabase
+        .from("crm_lead_events")
+        .delete()
+        .eq("user_id", ctx.userId)
+        .eq("lead_id", u.id)
+        .eq("type", "stage_change")
+        .gte("created_at", u.since);
+    }
   }
   const { error: upError } = await ctx.supabase
     .from("inbox_messages")
@@ -267,6 +308,15 @@ export async function executeCalls(calls: ToolCall[], ctx: ExecContext): Promise
       case "log_time":
         out.push(await logTime(call.args, ctx));
         break;
+      case "create_lead":
+        out.push(await createLead(call.args, ctx));
+        break;
+      case "update_lead":
+        out.push(await updateLead(call.args, ctx));
+        break;
+      case "log_outreach":
+        out.push(await logOutreach(call.args, ctx));
+        break;
       case "ask_clarification":
         out.push({ tool: "ask_clarification", ok: false, clarification: true, line: `❓ ${call.args.question}` });
         break;
@@ -287,6 +337,7 @@ export async function composeReply(outcomes: ActionOutcome[], ctx: ExecContext):
     const h = await loadHighlightMilestone(ctx.supabase, { userId: ctx.userId, now: ctx.now });
     if (h) lines.push(milestoneLine(h.milestone.title, h.pace));
   }
+  if (outcomes.some((o) => o.outreachAdded)) lines.push(`📣 Abordagens hoje: ${await outreachToday(ctx)}`);
   if (outcomes.some((o) => o.created?.length || o.updated?.length)) lines.push('↩️ "desfaz" pra reverter');
   return lines.join("\n");
 }

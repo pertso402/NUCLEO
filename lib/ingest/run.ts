@@ -32,7 +32,14 @@ export async function resolveOwnerId(supabase: SupabaseClient): Promise<string> 
 
 /** Hábitos, tarefas abertas, objetivos e timer: vão para o prompt e para as ferramentas. */
 export async function loadRoutineState(supabase: SupabaseClient, userId: string): Promise<RoutineState> {
-  const [habits, tasks, goals, timer] = await Promise.all([
+  const [leads, habits, tasks, goals, timer] = await Promise.all([
+    supabase
+      .from("crm_leads")
+      .select("id, name, business, stage, next_action, next_action_on")
+      .eq("user_id", userId)
+      .neq("stage", "perdido")
+      .order("stage_changed_at", { ascending: false })
+      .limit(60),
     supabase.from("habits").select("id, name").eq("user_id", userId).eq("active", true).order("position"),
     supabase
       .from("tasks")
@@ -45,10 +52,11 @@ export async function loadRoutineState(supabase: SupabaseClient, userId: string)
     supabase.from("goals").select("id, title").eq("user_id", userId).eq("status", "active").order("position"),
     supabase.from("time_entries").select("id, label, started_at").eq("user_id", userId).is("ended_at", null).maybeSingle(),
   ]);
-  for (const r of [habits, tasks, goals, timer]) {
+  for (const r of [leads, habits, tasks, goals, timer]) {
     if (r.error) throw new Error(`Falha ao ler a rotina: ${r.error.message}`);
   }
   return {
+    leads: (leads.data ?? []) as RoutineState["leads"],
     habits: (habits.data ?? []) as RoutineState["habits"],
     openTasks: (tasks.data ?? []) as RoutineState["openTasks"],
     goals: (goals.data ?? []) as RoutineState["goals"],
@@ -108,6 +116,7 @@ export async function runIngest(input: { channel: Channel; text: string; now?: D
       habits: routine.habits.map((h) => h.name),
       openTasks: routine.openTasks.map((t) => t.title),
       goals: routine.goals.map((g) => g.title),
+      leads: routine.leads.map((l) => `${l.name}${l.business ? ` · ${l.business}` : ""} · ${l.stage}`),
       openTimer: routine.openTimer
         ? {
             label: routine.openTimer.label,

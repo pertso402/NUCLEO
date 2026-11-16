@@ -13,6 +13,8 @@ export interface ParserContext {
   openTasks?: string[];
   /** Objetivos ativos (títulos). */
   goals?: string[];
+  /** Leads do pipeline: "Nome · Empresa · etapa" (máx. ~60). */
+  leads?: string[];
   /** Timer rodando agora, se houver. */
   openTimer?: { label: string | null; minutes: number } | null;
   /** Se a mensagem anterior do mesmo canal pediu esclarecimento há pouco. */
@@ -63,7 +65,7 @@ export function buildSystemPrompt(ctx: ParserContext): string {
     "",
     "Regras:",
     "- Uma mensagem pode ter vários lançamentos: uma chamada de add_transaction para cada.",
-    "- 'recebi', 'entrou', 'cliente pagou', 'fechei' com valor = income. 'gastei', 'paguei', 'comprei' = expense.",
+    "- 'recebi', 'entrou', 'caiu', 'cliente pagou' com valor = income. 'gastei', 'paguei', 'comprei' = expense.",
     "- amount: copie o valor como ele falou (ex.: '1500', '38,90', '1,5 mil'). Não converta.",
     "- category: use EXATAMENTE um nome da lista do tipo certo. Sem encaixe claro: 'Outras receitas' (income) ou 'Outros' (expense).",
     "  Dicas: mercado, supermercado, padaria, iFood, lanche, almoço → Alimentação. Uber, 99, gasolina, estacionamento → Transporte/Combustível.",
@@ -85,11 +87,22 @@ export function buildSystemPrompt(ctx: ParserContext): string {
     "- 'começa timer X' / 'bora focar em X' = start_timer; 'para o timer' / 'parei o foco' = stop_timer.",
     "- Dinheiro junto com hábito ou tarefa na mesma mensagem: uma chamada para cada coisa.",
     "",
+    "Pipeline (leads):",
+    "- Pessoa/negócio que JÁ está na lista de leads = update_lead (lead_ref = nome ou empresa como na lista). Quem NÃO está na lista = create_lead, NUNCA update_lead (confira a lista antes; nome parecido de outra empresa não conta).",
+    "- 'abordei', 'mandei mensagem', 'prospectei' + quantidade, sem nome = log_outreach. Com nome de alguém novo = create_lead (stage abordado).",
+    "- Etapas: abordado → conversou → reuniao (marcou/teve reunião) → proposta (pediu/recebeu proposta) → fechado | perdido.",
+    "- 'fechou', 'fechei com', 'topou', 'assinou' + valor por mês = update_lead stage fechado e monthly_value. NÃO é receita (add_transaction) até ele dizer que recebeu.",
+    "- 'não quis', 'desistiu', 'achou caro', 'sumiu' = update_lead stage perdido + lost_reason (caro → preco; 'agora não' → timing; sumiu/não respondeu → sem_resposta; fechou com outro → concorrente).",
+    "- 'manda sexta', 'volto a falar quinta', 'ligar amanhã' = next_action + next_action_on (data pela lista de dias).",
+    "- Reunião marcada para um dia = stage reuniao, next_action 'reunião' e next_action_on = o dia da reunião. Sempre preencha next_action_on quando ele citar um dia.",
+    "- Pedido de proposta/orçamento de alguém da lista de leads = update_lead (stage proposta, next_action 'mandar proposta'); de alguém fora da lista e sem contexto de venda = add_task.",
+    "",
     `Categorias de receita: ${ctx.incomeCategories.join(", ")}.`,
     `Categorias de despesa: ${ctx.expenseCategories.join(", ")}.`,
     `Hábitos ativos: ${quoted(ctx.habits, "nenhum cadastrado")}.`,
     `Tarefas abertas: ${quoted(ctx.openTasks, "nenhuma")}.`,
     `Objetivos ativos: ${quoted(ctx.goals, "nenhum")}.`,
+    `Leads: ${quoted(ctx.leads, "nenhum")}.`,
     `Timer: ${timer}.`,
   ].join("\n");
 }

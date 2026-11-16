@@ -22,7 +22,7 @@ function setup(opts: { routine?: Partial<RoutineState>; seed?: Record<string, Re
     { habit_logs: ["habit_id", "log_date"] },
     { tasks: { status: "todo", completed_at: null }, time_entries: { ended_at: null, is_focus: true } },
   );
-  const routine: RoutineState = { habits: [], openTasks: [], goals: [], openTimer: null, ...opts.routine };
+  const routine: RoutineState = { leads: [], habits: [], openTasks: [], goals: [], openTimer: null, ...opts.routine };
   const ctx: ExecContext = {
     supabase: db.client,
     userId: U,
