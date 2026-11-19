@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 3 (aceite das Fases 1 e 2 pendente — ver Bloqueios; o Peter pediu para seguir e deixar o crédito da OpenAI para depois)
-**Próxima tarefa:** aceite real das Fases 1–3 com o Peter (WhatsApp, iPhone, ticket médio + marco de mensalidades); depois Fase 4 (Open Finance — precisa de credenciais Pluggy).
+**Próxima tarefa:** P.1 aplicar `20261119120000_productivity.sql` no SQL Editor; seguir P.2–P.7 (módulo de Produtividade).
 
 ---
 
@@ -70,6 +70,19 @@
 **Critérios de aceite:** não consigo salvar lead vivo sem próxima ação · o Comando mostra "hoje: N abordagens" calculado pelo funil · mover lead pra "fechado" atualiza MRR e o marco.
 
 **Status (2026-11-16):** tarefas todas feitas. (1) Lead vivo sem próxima ação: **ok** — recusado no banco de produção (constraint 23514; nada gravado), e as telas/parser completam "Fazer follow-up" no próximo dia útil. (2) "Hoje: N abordagens" no Comando pelo funil: **ok no código**; com os dados reais aparece a meta manual (5) porque ainda não há ticket médio — vira automática assim que o Peter informar o ticket no Pipeline. (3) Fechado → MRR e marco: **ok no código e nos testes** (`v_mrr`, `syncAchievements` em toda mudança de contrato, linha do marco de MRR na resposta); falta o Peter criar um marco "Mensalidades ativas" e fechar um lead de verdade para ver no app.
+
+---
+
+## Fase P — Produtividade (pedido do Peter em 19/11, antes da Fase 4)
+- [ ] P.1 Migration: `projects` (negócio/cliente/projeto/pessoal/estudo, cor, meta de horas/semana, prazo), `tasks.project_id` + estimativa + status `doing`, `time_entries.project_id/task_id/kind/planned_minutes`, configurações do pomodoro — **pronta e validada**, falta aplicar
+- [ ] P.2 Tela de Projetos (lista, criar/editar, detalhe com tarefas e horas)
+- [ ] P.3 Tarefas por projeto (agrupadas, filtros, "fazendo", estimativa × realizado)
+- [ ] P.4 Pomodoro + cronômetro global (visível em todas as telas, ligado a tarefa/projeto)
+- [ ] P.5 Análise de tempo: dia/semana/mês, comparação com o período anterior, por projeto, evolução, horários
+- [ ] P.6 Parser entende projeto (tarefa, timer e tempo)
+- [ ] P.7 Layout mais bonito e dinâmico nas telas de rotina
+
+**Critérios de aceite:** toda tarefa e todo minuto podem ter projeto · pomodoro roda em qualquer tela e grava o tempo na tarefa · vejo horas por dia/semana/mês e por projeto com comparação · "começa pomodoro no cardápio do Choppatinhas" funciona.
 
 ---
 
@@ -147,6 +160,7 @@
 - 2026-11-16 — Análises (3.7): conversão por etapa com a mesma contagem do funil (`stageCounts`, 90 dias, mostra "avançaram/passaram"); motivos de perda e origem que mais fecha em 180 dias (origem conta leads criados na janela; MRR só de contratos ativos; ordena por fechados → taxa → volume). Barras em CSS (só transform), sem Recharts.
 - 2026-11-16 — MRR e receita por lead (3.8): marco `mrr` lê `v_mrr` (não depende de período) e agora pode ser batido; `syncAchievements` roda ao mover etapa, mudar contrato ou salvar mensalidade de lead fechado (tela) e quando o ingest fecha/reabre lead ou muda mensalidade de fechado (`mrrChanged`), e a resposta traz a linha do marco de MRR. `add_transaction` ganhou `lead_ref`: receita é vinculada ao lead pelo `lead_ref` do modelo ou pelo cliente citado (match único); a resposta diz "cliente: X" quando o nome não estava na frase. Dinheiro: campo "Cliente do pipeline" no editor (só receita) e etiqueta Ion no extrato; detalhe do lead mostra "Receita recebida". Bateria: 45 frases; a do Carlos (ambígua) às vezes vira pergunta de confirmação (3 de 4 rodadas 45/45).
 - 2026-11-16 — Correção do áudio no app: a OpenAI recusava o MP4 fragmentado do iPhone ("Audio file might be corrupted or unsupported", visto nos logs da Vercel). Agora o app converte a gravação para WAV mono 16 kHz no navegador (`lib/audio-wav.ts`, Web Audio; se não conseguir decodificar, manda o original) e o servidor, se o modelo principal recusar o formato, tenta `whisper-1`. Nome do arquivo pela extensão certa (`audioExtension`).
+- 2026-11-19 — **Fase P (Produtividade) antes da Fase 4**, a pedido do Peter ("preciso disso 100% estruturado"). Projetos são uma entidade só com tipo (negócio, cliente, projeto, pessoal, estudo), opcionalmente ligados a um lead (cliente) e a um objetivo. Tipos novos com prefixo `nucleo_` (banco compartilhado). Cores de projeto = paleta categórica própria (violet, cyan, lime, amber, pink, teal, blue, orange) só para distinguir projetos nos gráficos — as cores de sinal do DESIGN continuam com o significado delas.
 - 2026-11-13 — Tela Dinheiro: filtros (mês, tipo, categoria) vivem na URL (`?mes=2026-11&tipo=expense&cat=<id>`), então dá pra voltar/compartilhar o estado. Totais e relatórios usam só `confirmed` (mesma regra das views); o extrato mostra também `pending_review` com chip "revisar" e botão Confirmar por linha (a revisão em lote continua na 4.4). Edição/exclusão por server actions com a sessão do dono (RLS), valor como texto pt-BR → `parseBRL`; excluir pede confirmação em 2 toques. Receita acumulada é **dia a dia no mês**, com a meta do marco `revenue_month` do mês como linha tracejada. Categorias em barras horizontais simples (sem Recharts) que filtram o extrato ao tocar. Recharts 3.
 - 2026-11-13 — **Visual v2 "Neon"** (pedido do Peter: mais cyberpunk, mais luz e brilho, menos quadrado, menos apagado). Fundo com luzes de neon difusas que derivam, linhas de varredura e horizonte de luz; cards de vidro com filete de luz; raios maiores e chips em pílula; texto neon nos números de receita/progresso; anel em estilo gauge (escala de 60 marcas, ponto de luz na ponta); doca de vidro flutuante; gráficos com glow. Documentado no DESIGN.md (v2). Desfoque só em poucos elementos por tela (extrato sem desfoque) por causa do iPhone 11 Pro; luzes do fundo são gradientes (sem `filter: blur`) animando só `transform`.
 - 2026-11-13 — **Navegação instantânea** (Peter sentia atraso ao trocar de aba). Causa: cada aba esperava o servidor montar a página inteira (com consultas ao Supabase) antes de trocar. Correções: `app/(app)/loading.tsx` (esqueleto aparece na hora), aba acende no toque (`useOptimisticPath`), `prefetch` completo nas abas/sidebar (página com dados já baixada em segundo plano), cache do router (`experimental.staleTimes` 300s), entrada de tela de 180ms só com opacity/transform, `active:scale` em tudo que é tocável. Para o cache não mostrar dado velho, um **único `RealtimeRefresh` no layout** escuta `transactions`/`milestones` e chama `router.refresh()` (que descarta o cache) a cada mudança; as server actions também revalidam. Medido em dev: aba acende em 8 ms; voltar a uma aba visitada 22–78 ms (antes ~1,3 s). A sessão no `proxy.ts` já é validada localmente (`getClaims` com chave ES256).
@@ -220,3 +234,4 @@
 | 2026-11-16 | 3.7 ✓ | `stageCounts` extraído de `computeRates`, `lib/metrics/pipeline-analytics.ts` (`lostReasons`, `originStats`; 3 testes), `lib/data/pipeline-analytics.ts`, `components/pipeline/PipelineAnalytics.tsx` abaixo do kanban. Conferido em 375×812 e 1366×800 com dados fictícios; consulta no banco real. |
 | 2026-11-16 | 3.8 ✓ — **Fase 3 com todas as tarefas feitas** | Marco `mrr` via `v_mrr` + conquista; sync de conquistas nas ações do Pipeline e no ingest; `lead_ref` em `add_transaction`; lead no Dinheiro (editor/extrato) e receita no detalhe do lead. Testes: sync com MRR (+1), 2 novos no pipeline do ingest, +1 frase na bateria. Aceite: constraint de lead vivo provada em produção; os outros dois dependem de dados do Peter (ver status acima). |
 | 2026-11-16 | correção | "Não consegui transcrever agora" no botão de áudio: causa nos logs = formato do iPhone recusado pela OpenAI. WAV no navegador + fallback `whisper-1` no servidor; 4 testes; conferido no navegador que o app envia WAV (RIFF/WAVE) e em produção com fala gerada por TTS. |
+| 2026-11-19 | P.1 (parcial) | Migration `20261119120000_productivity.sql` validada em PGlite com todas as anteriores (12 checagens: paleta, meta semanal, estimativa, status doing, pomodoro, dono de projeto/tarefa entre usuários, set null ao apagar projeto, RLS). Gatilho de dono separado em duas funções (PL/pgSQL avalia `new.task_id` mesmo com a condição antes falsa). |
