@@ -6,7 +6,7 @@ export interface GoalTask {
   id: string;
   title: string;
   due_on: string | null;
-  status: "todo" | "done";
+  status: "todo" | "doing" | "done";
   moves_revenue: boolean;
 }
 
@@ -46,7 +46,7 @@ export async function loadGoals(quarter: string): Promise<Goal[]> {
       .from("tasks")
       .select("id, title, due_on, status, moves_revenue, goal_id")
       .in("goal_id", ids)
-      .in("status", ["todo", "done"])
+      .in("status", ["todo", "doing", "done"])
       .order("status", { ascending: false }) // todo antes de done
       .order("due_on", { ascending: true, nullsFirst: false })
       .limit(1000);
@@ -57,7 +57,7 @@ export async function loadGoals(quarter: string): Promise<Goal[]> {
         id: t.id as string,
         title: t.title as string,
         due_on: (t.due_on as string | null) ?? null,
-        status: t.status as "todo" | "done",
+        status: t.status as "todo" | "doing" | "done",
         moves_revenue: Boolean(t.moves_revenue),
       });
       byGoal.set(t.goal_id as string, list);

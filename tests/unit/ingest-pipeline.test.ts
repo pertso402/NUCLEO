@@ -33,7 +33,7 @@ function setup(leads: LeadLite[] = [], seed: Record<string, Record<string, unkno
     {},
     { crm_leads: { stage: "abordado" } },
   );
-  const routine: RoutineState = { leads: [...leads], habits: [], openTasks: [], goals: [], openTimer: null };
+  const routine: RoutineState = { leads: [...leads], habits: [], openTasks: [], goals: [], projects: [], openTimer: null };
   const ctx: ExecContext = { supabase: db.client, userId: U, inboxId: "inbox-now", source: "whatsapp", now: NOW, categories: [], routine };
   return { db, ctx, run: (calls: ToolCall[]) => executeCalls(calls, ctx) };
 }

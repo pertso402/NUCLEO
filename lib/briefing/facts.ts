@@ -55,7 +55,7 @@ export async function loadBriefingFacts({ supabase, userId, now }: Ctx): Promise
   const [highlight, day, due, habits, logs] = await Promise.all([
     loadHighlightMilestone(supabase, { userId, now }),
     loadToday(now, { supabase, userId }),
-    supabase.from("tasks").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "todo").lte("due_on", today),
+    supabase.from("tasks").select("id", { count: "exact", head: true }).eq("user_id", userId).in("status", ["todo", "doing"]).lte("due_on", today),
     supabase.from("habits").select("id, name, target_per_week").eq("user_id", userId).eq("active", true).order("position"),
     supabase.from("habit_logs").select("habit_id, log_date").eq("user_id", userId).gte("log_date", weekStart).lt("log_date", today),
   ]);
@@ -93,7 +93,7 @@ export async function loadClosingFacts({ supabase, userId, now }: Ctx, reviewUrl
       .eq("kind", "income")
       .eq("status", "confirmed")
       .eq("occurred_on", today),
-    supabase.from("tasks").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "todo").eq("due_on", tomorrow),
+    supabase.from("tasks").select("id", { count: "exact", head: true }).eq("user_id", userId).in("status", ["todo", "doing"]).eq("due_on", tomorrow),
   ]);
   const incomeCents = (income.data ?? []).reduce((s, r) => s + toCents(r.amount_cents as number), 0);
 

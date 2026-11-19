@@ -32,7 +32,7 @@ export async function resolveOwnerId(supabase: SupabaseClient): Promise<string> 
 
 /** Hábitos, tarefas abertas, objetivos e timer: vão para o prompt e para as ferramentas. */
 export async function loadRoutineState(supabase: SupabaseClient, userId: string): Promise<RoutineState> {
-  const [leads, habits, tasks, goals, timer] = await Promise.all([
+  const [leads, habits, tasks, goals, timer, projects] = await Promise.all([
     supabase
       .from("crm_leads")
       .select("id, name, business, stage, next_action, next_action_on")
@@ -43,16 +43,22 @@ export async function loadRoutineState(supabase: SupabaseClient, userId: string)
     supabase.from("habits").select("id, name").eq("user_id", userId).eq("active", true).order("position"),
     supabase
       .from("tasks")
-      .select("id, title, due_on, moves_revenue")
+      .select("id, title, due_on, moves_revenue, project_id")
       .eq("user_id", userId)
-      .eq("status", "todo")
+      .in("status", ["todo", "doing"])
       .order("due_on", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(40),
     supabase.from("goals").select("id, title").eq("user_id", userId).eq("status", "active").order("position"),
-    supabase.from("time_entries").select("id, label, started_at").eq("user_id", userId).is("ended_at", null).maybeSingle(),
+    supabase
+      .from("time_entries")
+      .select("id, label, started_at, kind, planned_minutes")
+      .eq("user_id", userId)
+      .is("ended_at", null)
+      .maybeSingle(),
+    supabase.from("projects").select("id, name").eq("user_id", userId).eq("status", "active").order("position"),
   ]);
-  for (const r of [leads, habits, tasks, goals, timer]) {
+  for (const r of [leads, habits, tasks, goals, timer, projects]) {
     if (r.error) throw new Error(`Falha ao ler a rotina: ${r.error.message}`);
   }
   return {
@@ -60,6 +66,7 @@ export async function loadRoutineState(supabase: SupabaseClient, userId: string)
     habits: (habits.data ?? []) as RoutineState["habits"],
     openTasks: (tasks.data ?? []) as RoutineState["openTasks"],
     goals: (goals.data ?? []) as RoutineState["goals"],
+    projects: (projects.data ?? []) as RoutineState["projects"],
     openTimer: (timer.data ?? null) as RoutineState["openTimer"],
   };
 }
@@ -116,6 +123,7 @@ export async function runIngest(input: { channel: Channel; text: string; now?: D
       habits: routine.habits.map((h) => h.name),
       openTasks: routine.openTasks.map((t) => t.title),
       goals: routine.goals.map((g) => g.title),
+      projects: routine.projects.map((p) => p.name),
       leads: routine.leads.map((l) => `${l.name}${l.business ? ` · ${l.business}` : ""} · ${l.stage}`),
       openTimer: routine.openTimer
         ? {

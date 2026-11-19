@@ -48,6 +48,8 @@ const TaskSchema = z.object({
   due_on: isoDate.nullable(),
   moves_revenue: z.boolean(),
   priority: z.number().int().min(1).max(3).default(2),
+  project_id: id.nullable().optional(),
+  estimate_minutes: z.number().int().min(1).max(6000).nullable().optional(),
 });
 export type TaskInput = z.input<typeof TaskSchema>;
 

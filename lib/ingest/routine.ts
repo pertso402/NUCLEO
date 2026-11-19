@@ -41,6 +41,21 @@ function pastOrToday(date: string | null, today: ISODate): ISODate {
 
 const shortList = (items: string[]) => items.slice(0, 4).map((t) => `"${t}"`).join(", ");
 
+/**
+ * Projeto citado pelo Peter (Fase P). Não achou ou ficou ambíguo: segue sem projeto e avisa na resposta
+ * (não trava a captura por causa disso).
+ */
+export function resolveProject(
+  ref: string | null | undefined,
+  ctx: ExecContext,
+): { project: { id: string; name: string } | null; note: string | null } {
+  if (!ref?.trim()) return { project: null, note: null };
+  const m = matchByName(ctx.routine.projects, ref, (p) => p.name);
+  if (m && "item" in m) return { project: m.item, note: null };
+  if (m && "ambiguous" in m) return { project: null, note: `projeto "${ref}" ficou ambíguo (${shortList(m.ambiguous.map((p) => p.name))}), salvei sem projeto` };
+  return { project: null, note: `projeto "${ref}" não existe, salvei sem projeto` };
+}
+
 // ------------------------------------------------------------------ tarefas
 
 export async function addTask(args: Args<"add_task">, ctx: ExecContext): Promise<ActionOutcome> {
@@ -49,6 +64,7 @@ export async function addTask(args: Args<"add_task">, ctx: ExecContext): Promise
   const goal = args.goal_ref ? matchByName(ctx.routine.goals, args.goal_ref, (g) => g.title) : null;
   const goalId = goal && "item" in goal ? goal.item.id : null;
   const title = args.title.trim();
+  const { project, note } = resolveProject(args.project_ref, ctx);
 
   const { data, error } = await ctx.supabase
     .from("tasks")
@@ -58,17 +74,20 @@ export async function addTask(args: Args<"add_task">, ctx: ExecContext): Promise
       due_on: dueOn,
       moves_revenue: args.moves_revenue,
       goal_id: goalId,
+      project_id: project?.id ?? null,
       source: ctx.source,
     })
     .select("id")
     .single();
   if (error) throw new Error(`Falha ao criar tarefa: ${error.message}`);
   const id = data.id as string;
-  ctx.routine.openTasks.push({ id, title, due_on: dueOn, moves_revenue: args.moves_revenue });
+  ctx.routine.openTasks.push({ id, title, due_on: dueOn, moves_revenue: args.moves_revenue, project_id: project?.id ?? null });
 
   const parts = [`Tarefa: ${title}`];
+  if (project) parts.push(project.name);
   if (dueOn) parts.push(dayLabel(dueOn, today));
   if (args.moves_revenue) parts.push("mexe no faturamento");
+  if (note) parts.push(note);
   return { tool: "add_task", ok: true, line: `✅ ${parts.join(" · ")}`, created: [{ table: "tasks", id }] };
 }
 
@@ -89,7 +108,7 @@ export async function completeTask(args: Args<"complete_task">, ctx: ExecContext
     .update({ status: "done", completed_at: ctx.now.toISOString() })
     .eq("id", task.id)
     .eq("user_id", ctx.userId)
-    .eq("status", "todo");
+    .in("status", ["todo", "doing"]);
   if (error) throw new Error(`Falha ao concluir tarefa: ${error.message}`);
   ctx.routine.openTasks = open.filter((t) => t.id !== task.id);
 
@@ -176,9 +195,12 @@ async function focusMinutesToday(ctx: ExecContext): Promise<number> {
 async function closeOpenTimer(ctx: ExecContext): Promise<Pick<ActionOutcome, "line" | "updated"> | null> {
   const t = ctx.routine.openTimer;
   if (!t) return null;
+  const planned =
+    t.kind === "pomodoro" && t.planned_minutes ? new Date(new Date(t.started_at).getTime() + t.planned_minutes * 60_000) : null;
+  const end = planned && planned < ctx.now ? planned : ctx.now;
   const { error } = await ctx.supabase
     .from("time_entries")
-    .update({ ended_at: ctx.now.toISOString() })
+    .update({ ended_at: end.toISOString() })
     .eq("id", t.id)
     .eq("user_id", ctx.userId)
     .is("ended_at", null);
@@ -186,25 +208,63 @@ async function closeOpenTimer(ctx: ExecContext): Promise<Pick<ActionOutcome, "li
   ctx.routine.openTimer = null;
   const label = t.label ? `${t.label} · ` : "";
   return {
-    line: `✅ Timer parado: ${label}${formatDuration(minutesBetween(t.started_at, ctx.now))}`,
+    line: `✅ ${t.kind === "pomodoro" ? "Pomodoro" : "Timer"} parado: ${label}${formatDuration(minutesBetween(t.started_at, end))}`,
     updated: [{ table: "time_entries", id: t.id, before: { ended_at: null } }],
   };
 }
 
 export async function startTimer(args: Args<"start_timer">, ctx: ExecContext): Promise<ActionOutcome> {
   const closed = await closeOpenTimer(ctx);
-  const label = args.label?.trim() || null;
+  let label = args.label?.trim() || null;
+  let { project, note } = resolveProject(args.project_ref, ctx);
+
+  // "foca no cardápio" e existe a tarefa aberta "Montar cardápio de bebidas" → o tempo vai pra tarefa (e pro projeto dela).
+  let taskId: string | null = null;
+  if (label) {
+    const m = matchByName(ctx.routine.openTasks, label, (t) => t.title);
+    const task = m && "item" in m ? m.item : null;
+    if (task && (!project || !task.project_id || task.project_id === project.id)) {
+      taskId = task.id;
+      label = task.title;
+      if (!project && task.project_id) {
+        const p = ctx.routine.projects.find((x) => x.id === task.project_id);
+        if (p) {
+          project = p;
+          note = null;
+        }
+      }
+    }
+  }
+
+  let planned: number | null = null;
+  if (args.pomodoro) {
+    const { data: s } = await ctx.supabase.from("settings").select("pomodoro_focus_minutes").eq("user_id", ctx.userId).maybeSingle();
+    planned = Number(s?.pomodoro_focus_minutes ?? 25) || 25;
+  }
+
   const startedAt = ctx.now.toISOString();
   const { data, error } = await ctx.supabase
     .from("time_entries")
-    .insert({ user_id: ctx.userId, label, started_at: startedAt, is_focus: true })
+    .insert({
+      user_id: ctx.userId,
+      label,
+      started_at: startedAt,
+      is_focus: true,
+      kind: args.pomodoro ? "pomodoro" : "timer",
+      planned_minutes: planned,
+      project_id: project?.id ?? null,
+      task_id: taskId,
+    })
     .select("id")
     .single();
   if (error) throw new Error(`Falha ao iniciar o timer: ${error.message}`);
   const id = data.id as string;
-  ctx.routine.openTimer = { id, label, started_at: startedAt };
+  ctx.routine.openTimer = { id, label, started_at: startedAt, kind: args.pomodoro ? "pomodoro" : "timer", planned_minutes: planned };
+  if (taskId) await ctx.supabase.from("tasks").update({ status: "doing" }).eq("id", taskId).eq("user_id", ctx.userId).eq("status", "todo");
 
-  const started = `✅ Timer iniciado${label ? `: ${label}` : ""}`;
+  const what = [label, project?.name].filter(Boolean).join(" · ");
+  const head = args.pomodoro ? `✅ Pomodoro de ${planned} min` : "✅ Timer iniciado";
+  const started = `${head}${what ? `: ${what}` : ""}${note ? ` (${note})` : ""}`;
   return {
     tool: "start_timer",
     ok: true,
@@ -233,6 +293,7 @@ export async function logTime(args: Args<"log_time">, ctx: ExecContext): Promise
   const endedAt = date === today ? ctx.now : new Date(startOfDayInstant(date).getTime() + 18 * 3_600_000);
   const startedAt = new Date(endedAt.getTime() - args.minutes * 60_000);
   const label = args.label.trim();
+  const { project, note } = resolveProject(args.project_ref, ctx);
 
   const { data, error } = await ctx.supabase
     .from("time_entries")
@@ -242,6 +303,8 @@ export async function logTime(args: Args<"log_time">, ctx: ExecContext): Promise
       started_at: startedAt.toISOString(),
       ended_at: endedAt.toISOString(),
       is_focus: true,
+      kind: "manual",
+      project_id: project?.id ?? null,
     })
     .select("id")
     .single();
@@ -251,7 +314,7 @@ export async function logTime(args: Args<"log_time">, ctx: ExecContext): Promise
   return {
     tool: "log_time",
     ok: true,
-    line: `✅ Tempo: ${formatDuration(args.minutes)} · ${label}${when}`,
+    line: `✅ Tempo: ${formatDuration(args.minutes)} · ${label}${project ? ` · ${project.name}` : ""}${when}${note ? ` (${note})` : ""}`,
     created: [{ table: "time_entries", id: data.id as string }],
   };
 }

@@ -28,12 +28,20 @@ export interface RoutineState {
   /** Leads do pipeline (vivos e fechados recentes). */
   leads: LeadLite[];
   habits: { id: string; name: string }[];
-  openTasks: { id: string; title: string; due_on: string | null; moves_revenue: boolean }[];
+  openTasks: { id: string; title: string; due_on: string | null; moves_revenue: boolean; project_id?: string | null }[];
   goals: { id: string; title: string }[];
-  openTimer: { id: string; label: string | null; started_at: string } | null;
+  /** Projetos/negócios ativos (Fase P). */
+  projects: { id: string; name: string }[];
+  openTimer: {
+    id: string;
+    label: string | null;
+    started_at: string;
+    kind?: "timer" | "pomodoro" | "manual";
+    planned_minutes?: number | null;
+  } | null;
 }
 
-export const EMPTY_ROUTINE: RoutineState = { leads: [], habits: [], openTasks: [], goals: [], openTimer: null };
+export const EMPTY_ROUTINE: RoutineState = { leads: [], habits: [], openTasks: [], goals: [], projects: [], openTimer: null };
 
 export interface ExecContext {
   supabase: SupabaseClient; // admin (service_role): SEMPRE filtrar/gravar com userId
