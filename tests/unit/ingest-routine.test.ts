@@ -10,7 +10,7 @@ import { composeReply, executeCalls, type ExecContext, type RoutineState } from 
 import { matchByName } from "@/lib/ingest/match";
 import { buildSystemPrompt } from "@/lib/ingest/parser";
 import { dayLabel, formatDuration } from "@/lib/ingest/routine";
-import { ToolCallSchema, type ToolCall } from "@/lib/ingest/tools";
+import { ToolCallSchema, type ToolCallInput } from "@/lib/ingest/tools";
 import { fakeSupabase } from "./helpers/fake-supabase";
 
 const U = "user-1";
@@ -22,7 +22,7 @@ function setup(opts: { routine?: Partial<RoutineState>; seed?: Record<string, Re
     { habit_logs: ["habit_id", "log_date"] },
     { tasks: { status: "todo", completed_at: null }, time_entries: { ended_at: null, is_focus: true } },
   );
-  const routine: RoutineState = { leads: [], habits: [], openTasks: [], goals: [], openTimer: null, ...opts.routine };
+  const routine: RoutineState = { leads: [], habits: [], openTasks: [], goals: [], projects: [], openTimer: null, ...opts.routine } as RoutineState;
   const ctx: ExecContext = {
     supabase: db.client,
     userId: U,
@@ -32,7 +32,7 @@ function setup(opts: { routine?: Partial<RoutineState>; seed?: Record<string, Re
     categories: [],
     routine,
   };
-  return { db, ctx, run: (calls: ToolCall[]) => executeCalls(calls, ctx) };
+  return { db, ctx, run: (calls: ToolCallInput[]) => executeCalls(calls.map((c) => ToolCallSchema.parse(c)), ctx) };
 }
 
 describe("matchByName", () => {
@@ -229,6 +229,65 @@ describe("tempo", () => {
       { started_at: "2026-11-13T13:30:00.000Z", ended_at: "2026-11-13T15:00:00.000Z" },
       { started_at: "2026-11-12T20:15:00.000Z", ended_at: "2026-11-12T21:00:00.000Z" }, // 18h SP = 21h UTC
     ]);
+  });
+});
+
+describe("projetos (Fase P)", () => {
+  const PROJECTS = [
+    { id: "p1", name: "Choppatinhas" },
+    { id: "p2", name: "ARTe" },
+  ];
+
+  it("tarefa com projeto; projeto desconhecido salva sem e avisa", async () => {
+    const { db, run } = setup({ routine: { projects: PROJECTS } });
+    const [a, b] = await run([
+      { name: "add_task", args: { title: "Montar cardápio de bebidas", due_on: null, moves_revenue: false, goal_ref: null, project_ref: "choppatinhas" } },
+      { name: "add_task", args: { title: "Fazer logo", due_on: null, moves_revenue: false, goal_ref: null, project_ref: "Padaria" } },
+    ]);
+    expect(a!.line).toBe("✅ Tarefa: Montar cardápio de bebidas · Choppatinhas");
+    expect(b!.line).toBe('✅ Tarefa: Fazer logo · projeto "Padaria" não existe, salvei sem projeto');
+    expect(db.tables.tasks).toMatchObject([{ project_id: "p1" }, { project_id: null }]);
+  });
+
+  it("pomodoro no projeto: liga na tarefa aberta, usa a duração das configurações e marca 'fazendo'", async () => {
+    const { db, ctx, run } = setup({
+      seed: {
+        settings: [{ id: "s1", user_id: U, pomodoro_focus_minutes: 30 }],
+        tasks: [{ id: "t1", user_id: U, title: "Montar cardápio de bebidas", status: "todo", project_id: "p1" }],
+      },
+      routine: {
+        projects: PROJECTS,
+        openTasks: [{ id: "t1", title: "Montar cardápio de bebidas", due_on: null, moves_revenue: false, project_id: "p1" }],
+      },
+    });
+    const [o] = await run([{ name: "start_timer", args: { label: "cardápio", project_ref: "Choppatinhas", pomodoro: true } }]);
+    expect(o!.line).toBe("✅ Pomodoro de 30 min: Montar cardápio de bebidas · Choppatinhas");
+    expect(db.tables.time_entries![0]).toMatchObject({ kind: "pomodoro", planned_minutes: 30, project_id: "p1", task_id: "t1", ended_at: null });
+    expect(db.tables.tasks![0]!.status).toBe("doing");
+    expect(ctx.routine.openTimer).toMatchObject({ kind: "pomodoro", planned_minutes: 30 });
+  });
+
+  it("timer livre só com projeto e tempo lançado no projeto", async () => {
+    const { db, run } = setup({ routine: { projects: PROJECTS } });
+    const [a] = await run([{ name: "start_timer", args: { label: null, project_ref: "arte", pomodoro: false } }]);
+    expect(a!.line).toBe("✅ Timer iniciado: ARTe");
+    const [b] = await run([{ name: "log_time", args: { minutes: 60, label: "reels", date: null, project_ref: "ARTe" } }]);
+    expect(b!.line).toContain("✅ Tempo: 1h · reels · ARTe");
+    expect(db.tables.time_entries).toMatchObject([
+      { kind: "timer", project_id: "p2", planned_minutes: null },
+      { kind: "manual", project_id: "p2" },
+    ]);
+  });
+
+  it("pomodoro esquecido fecha no tempo planejado (não conta o que não foi trabalhado)", async () => {
+    const started = new Date(NOW.getTime() - 3 * 3_600_000).toISOString();
+    const { db, run } = setup({
+      seed: { time_entries: [{ id: "e1", user_id: U, label: "site", started_at: started, ended_at: null, is_focus: true }] },
+      routine: { openTimer: { id: "e1", label: "site", started_at: started, kind: "pomodoro", planned_minutes: 25 } },
+    });
+    const [o] = await run([{ name: "stop_timer", args: {} }]);
+    expect(o!.line).toMatch(/^✅ Pomodoro parado: site · 25 min/);
+    expect(db.tables.time_entries![0]!.ended_at).toBe(new Date(new Date(started).getTime() + 25 * 60_000).toISOString());
   });
 });
 

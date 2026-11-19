@@ -5,27 +5,52 @@ import { RealtimeRefresh } from "@/components/hud/RealtimeRefresh";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { TabBar } from "@/components/ui/TabBar";
 import { Celebration } from "@/components/milestones/Celebration";
+import { FocusPill } from "@/components/focus/FocusPill";
+import { FocusProvider } from "@/components/focus/FocusProvider";
+import { loadFocus, loadProjects } from "@/lib/data/productivity";
+import { Suspense } from "react";
 import { loadRecentAchievements } from "@/lib/data/milestone";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   // Conquistas recentes: a celebração aparece em qualquer tela (uma vez por aparelho).
-  const recent = await loadRecentAchievements(await createClient());
+  // Foco/pomodoro também: a sessão aberta e os projetos alimentam a pílula flutuante.
+  const [recent, focus, projects] = await Promise.all([
+    loadRecentAchievements(await createClient()),
+    loadFocus(),
+    loadProjects(),
+  ]);
   return (
     <CaptureProvider>
-      <GridBackground />
-      {/* Um ouvinte só para o app inteiro: mudou lançamento/marco (WhatsApp, Siri, app), a tela atualiza
+      <FocusProvider state={{ ...focus, projects, serverNow: new Date().getTime() }}>
+        <GridBackground />
+        {/* Um ouvinte só para o app inteiro: mudou lançamento/marco (WhatsApp, Siri, app), a tela atualiza
           e o cache das outras abas é descartado. Trocar de aba sem mudança usa o cache (instantâneo). */}
-      <RealtimeRefresh tables={["transactions", "milestones", "tasks", "habit_logs", "time_entries", "crm_leads", "outreach_logs"]} />
-      <Sidebar />
-      <div className="pt-safe lg:pl-60">
-        <main className="mx-auto w-full max-w-content px-4 pt-6 pb-32 lg:px-8 lg:pb-12">
-          {children}
-        </main>
-      </div>
-      <CaptureButton />
-      <TabBar />
-      <Celebration items={recent} />
+        <RealtimeRefresh
+          tables={[
+            "transactions",
+            "milestones",
+            "tasks",
+            "habit_logs",
+            "time_entries",
+            "crm_leads",
+            "outreach_logs",
+            "projects",
+          ]}
+        />
+        <Sidebar />
+        <div className="pt-safe lg:pl-60">
+          <main className="mx-auto w-full max-w-content px-4 pt-6 pb-32 lg:px-8 lg:pb-12">
+            {children}
+          </main>
+        </div>
+        <CaptureButton />
+        <TabBar />
+        <Suspense>
+          <FocusPill />
+        </Suspense>
+        <Celebration items={recent} />
+      </FocusProvider>
     </CaptureProvider>
   );
 }

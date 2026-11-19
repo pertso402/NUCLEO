@@ -63,12 +63,13 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       parameters: {
         type: "object",
         additionalProperties: false,
-        required: ["title", "due_on", "moves_revenue", "goal_ref"],
+        required: ["title", "due_on", "moves_revenue", "goal_ref", "project_ref"],
         properties: {
           title: { type: "string", description: "Tarefa curta no infinitivo, sem a data (ex.: 'Mandar proposta pra Sorveteria Gelato')" },
           due_on: { ...nullableString, description: "YYYY-MM-DD se ele disse quando ('sexta', 'amanhã', 'dia 20'); null = sem prazo" },
           moves_revenue: { type: "boolean", description: "true se mexe em faturamento: proposta, cobrança, follow-up de venda, fechar cliente, prospectar" },
           goal_ref: { ...nullableString, description: "Nome de um objetivo da lista, se a tarefa claramente serve a ele; senão null" },
+          project_ref: { ...nullableString, description: "Projeto/negócio/cliente da lista de projetos (nome EXATO) a que isso pertence; null se ele não disse e não está claro" },
         },
       },
     },
@@ -109,12 +110,16 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "start_timer",
       strict: true,
-      description: "Começa a cronometrar um trabalho ('começa timer …', 'iniciando …', 'bora focar em …').",
+      description: "Começa a cronometrar um trabalho ('começa timer …', 'iniciando …', 'bora focar em …', 'começa pomodoro …').",
       parameters: {
         type: "object",
         additionalProperties: false,
-        required: ["label"],
-        properties: { label: { ...nullableString, description: "No que ele vai trabalhar (ex.: 'cardápio Choppatinhas'); null se não disse" } },
+        required: ["label", "project_ref", "pomodoro"],
+        properties: {
+          label: { ...nullableString, description: "No que ele vai trabalhar, sem o nome do projeto (ex.: 'cardápio'); null se não disse" },
+          project_ref: { ...nullableString, description: "Projeto/negócio/cliente da lista de projetos (nome EXATO) a que isso pertence; null se ele não disse e não está claro" },
+          pomodoro: { type: "boolean", description: "true se ele pediu pomodoro; false = cronômetro livre" },
+        },
       },
     },
   },
@@ -136,11 +141,12 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       parameters: {
         type: "object",
         additionalProperties: false,
-        required: ["minutes", "label", "date"],
+        required: ["minutes", "label", "date", "project_ref"],
         properties: {
           minutes: { type: "integer", description: "Duração em minutos (1h30 = 90)" },
           label: { type: "string", description: "No que trabalhou" },
           date: { ...nullableString, description: "YYYY-MM-DD se foi outro dia; null = hoje" },
+          project_ref: { ...nullableString, description: "Projeto/negócio/cliente da lista de projetos (nome EXATO) a que isso pertence; null se ele não disse e não está claro" },
         },
       },
     },
@@ -280,15 +286,24 @@ export const ToolCallSchema = z.discriminatedUnion("name", [
       due_on: isoDate.nullable(),
       moves_revenue: z.boolean(),
       goal_ref: z.string().nullable(),
+      project_ref: z.string().nullable().default(null),
     }),
   }),
   z.object({ name: z.literal("complete_task"), args: z.object({ task_ref: z.string().trim().min(1) }) }),
   z.object({ name: z.literal("log_habit"), args: z.object({ habit_ref: z.string().trim().min(1), date: isoDate.nullable() }) }),
-  z.object({ name: z.literal("start_timer"), args: z.object({ label: z.string().nullable() }) }),
+  z.object({
+    name: z.literal("start_timer"),
+    args: z.object({ label: z.string().nullable(), project_ref: z.string().nullable().default(null), pomodoro: z.boolean().default(false) }),
+  }),
   z.object({ name: z.literal("stop_timer"), args: z.object({}) }),
   z.object({
     name: z.literal("log_time"),
-    args: z.object({ minutes: z.number().int().min(1).max(1440), label: z.string().trim().min(1), date: isoDate.nullable() }),
+    args: z.object({
+      minutes: z.number().int().min(1).max(1440),
+      label: z.string().trim().min(1),
+      date: isoDate.nullable(),
+      project_ref: z.string().nullable().default(null),
+    }),
   }),
   z.object({
     name: z.literal("create_lead"),
@@ -325,3 +340,5 @@ export const ToolCallSchema = z.discriminatedUnion("name", [
 ]);
 
 export type ToolCall = z.infer<typeof ToolCallSchema>;
+/** Forma aceita na entrada (campos novos com default podem faltar — testes e chamadas antigas). */
+export type ToolCallInput = z.input<typeof ToolCallSchema>;

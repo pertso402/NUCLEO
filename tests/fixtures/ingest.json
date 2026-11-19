@@ -369,7 +369,9 @@
       "expect": [
         {
           "tool": "start_timer",
-          "label_includes": "choppatinhas"
+          "label_includes": "cardápio",
+          "project_ref": "Choppatinhas",
+          "pomodoro": false
         }
       ]
     },
@@ -387,8 +389,9 @@
         {
           "tool": "log_time",
           "minutes": 120,
-          "label_includes": "padaria",
-          "date": null
+          "label_includes": "site",
+          "date": null,
+          "project_ref": "Padaria Pão Quente"
         }
       ]
     },
@@ -495,6 +498,57 @@
           "lead_ref_includes": "forno"
         }
       ]
+    },
+    {
+      "text": "começa pomodoro no cardápio do Choppatinhas",
+      "expect": [
+        {
+          "tool": "start_timer",
+          "label_includes": "cardápio",
+          "project_ref": "Choppatinhas",
+          "pomodoro": true
+        }
+      ]
+    },
+    {
+      "text": "bora focar no NÚCLEO",
+      "expect": [
+        {
+          "tool": "start_timer",
+          "project_ref": "NÚCLEO",
+          "pomodoro": false
+        }
+      ]
+    },
+    {
+      "text": "tarefa pra ARTe: roteiro dos reels sexta",
+      "expect": [
+        {
+          "tool": "add_task",
+          "title_includes": "roteiro",
+          "project_ref": "ARTe"
+        }
+      ]
+    },
+    {
+      "text": "trabalhei 2h no site da Padaria Pão Quente",
+      "expect": [
+        {
+          "tool": "log_time",
+          "minutes": 120,
+          "project_ref": "Padaria Pão Quente"
+        }
+      ]
+    },
+    {
+      "text": "preciso renovar a CNH",
+      "expect": [
+        {
+          "tool": "add_task",
+          "title_includes": "CNH",
+          "project_ref": null
+        }
+      ]
     }
   ],
   "context": {
@@ -518,6 +572,12 @@
       "Ana · Açaí Tropical · conversou",
       "Mercado Bom Preço · proposta",
       "Pizzaria Forno · reuniao"
+    ],
+    "projects": [
+      "Choppatinhas",
+      "ARTe",
+      "Padaria Pão Quente",
+      "NÚCLEO"
     ]
   },
   "_context_comment": "Rotina que o parser enxerga em todos os casos (hábitos, tarefas abertas, objetivos, timer rodando)."

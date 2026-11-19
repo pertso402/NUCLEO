@@ -1,7 +1,7 @@
 import "server-only";
 import { addDays, addMonths, dayInstantRange, startOfMonth, startOfWeek, todayISO, type ISODate } from "@/lib/dates";
 import { DEFAULT_POMODORO, type PomodoroConfig } from "@/lib/metrics/pomodoro";
-import { entryDay, entryMinutes, type TimeEntryRow } from "@/lib/metrics/time";
+import { entryDay, entryMinutes, isCompletePomodoro, type TimeEntryRow } from "@/lib/metrics/time";
 import type { ProjectColor, ProjectKind } from "@/lib/projects-palette";
 import { createClient } from "@/lib/supabase/server";
 
@@ -152,20 +152,27 @@ export async function loadWorkTasks(now = new Date()): Promise<{ open: WorkTask[
   return { open: (open.data ?? []).map(map), doneToday: (done.data ?? []).map(map) };
 }
 
-/** Foco em andamento + configuração do pomodoro + quanto já foi focado hoje. */
-export async function loadFocus(now = new Date()): Promise<{ open: OpenFocus | null; config: PomodoroConfig; todayMinutes: number; todayPomodoros: number }> {
+/** Foco em andamento + configuração do pomodoro + quanto já foi focado hoje (sessões fechadas). */
+export async function loadFocus(now = new Date()): Promise<{
+  open: OpenFocus | null;
+  config: PomodoroConfig;
+  todayMinutes: number;
+  todayPomodoros: number;
+  focusGoalMinutes: number;
+}> {
   const supabase = await supa();
   const { from, to } = dayInstantRange(todayISO(now));
   const [open, settings, today] = await Promise.all([
     supabase.from("time_entries").select("id, label, started_at, kind, planned_minutes, project_id, task_id").is("ended_at", null).maybeSingle(),
     supabase
       .from("settings")
-      .select("pomodoro_focus_minutes, pomodoro_short_break_minutes, pomodoro_long_break_minutes, pomodoro_cycles")
+      .select("pomodoro_focus_minutes, pomodoro_short_break_minutes, pomodoro_long_break_minutes, pomodoro_cycles, daily_focus_minutes_goal")
       .maybeSingle(),
-    supabase.from("time_entries").select("started_at, ended_at, is_focus, kind").gte("started_at", from.toISOString()).lt("started_at", to.toISOString()),
+    supabase.from("time_entries").select("started_at, ended_at, is_focus, kind, planned_minutes").gte("started_at", from.toISOString()).lt("started_at", to.toISOString()),
   ]);
   const s = settings.data;
-  const rows = (today.data ?? []).filter((e) => e.is_focus);
+  // Só sessões fechadas: a aberta é somada ao vivo no cliente.
+  const rows = (today.data ?? []).filter((e) => e.is_focus && e.ended_at);
   return {
     open: (open.data as OpenFocus | null) ?? null,
     config: s
@@ -176,8 +183,9 @@ export async function loadFocus(now = new Date()): Promise<{ open: OpenFocus | n
           cycles: Number(s.pomodoro_cycles),
         }
       : DEFAULT_POMODORO,
+    focusGoalMinutes: s ? Number(s.daily_focus_minutes_goal) : 240,
     todayMinutes: rows.reduce((m, e) => m + entryMinutes(e as { started_at: string; ended_at: string | null }, now), 0),
-    todayPomodoros: rows.filter((e) => e.kind === "pomodoro").length,
+    todayPomodoros: rows.filter((e) => isCompletePomodoro(e as Parameters<typeof isCompletePomodoro>[0])).length,
   };
 }
 

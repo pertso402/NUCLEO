@@ -3,6 +3,7 @@ import { cyclePosition, DEFAULT_POMODORO, formatClock, nextPhase } from "@/lib/m
 import {
   compare,
   fmtHours,
+  isCompletePomodoro,
   focusStreak,
   hourHeatmap,
   minutesByTask,
@@ -133,6 +134,20 @@ describe("pomodoro", () => {
     expect(formatClock(59_001)).toBe("01:00");
     expect(formatClock(3_723_000)).toBe("1:02:03");
     expect(formatClock(-5)).toBe("00:00");
+  });
+});
+
+describe("pomodoros completos", () => {
+  it("pomodoro parado antes do fim não conta como pomodoro (mas o tempo conta)", () => {
+    const entries = [
+      e("2026-11-19T12:00:00Z", 25, { kind: "pomodoro", planned_minutes: 25 }),
+      e("2026-11-19T13:00:00Z", 8, { kind: "pomodoro", planned_minutes: 25 }),
+      e("2026-11-19T14:00:00Z", 50, { kind: "pomodoro", planned_minutes: 50 }),
+    ];
+    const s = summarize(entries, periodRange("day", "2026-11-19"), NOW);
+    expect(s.pomodoros).toBe(2);
+    expect(s.totalMinutes).toBe(83);
+    expect(isCompletePomodoro({ ...entries[0]!, ended_at: null })).toBe(false);
   });
 });
 

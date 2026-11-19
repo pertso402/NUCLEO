@@ -1,17 +1,24 @@
+import { FocusPanel } from "@/components/focus/FocusPanel";
+import { ProjectGrid } from "@/components/projects/ProjectGrid";
 import { HabitBoard } from "@/components/routine/HabitBoard";
 import { RotinaTabs } from "@/components/routine/RotinaTabs";
 import { TaskBoard } from "@/components/routine/TaskBoard";
-import { TimePanel } from "@/components/routine/TimePanel";
+import { TimeAnalytics } from "@/components/time/TimeAnalytics";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { loadHabits, loadTasks, loadTime, type RotinaTab } from "@/lib/data/routine";
+import { loadFocus, loadProjects, loadProjectStats, loadTimeEntries, loadWorkTasks } from "@/lib/data/productivity";
+import { loadHabits, type RotinaTab } from "@/lib/data/routine";
 import { formatLongDate, todayISO } from "@/lib/dates";
 
+const TABS: RotinaTab[] = ["tarefas", "projetos", "foco", "tempo", "habitos"];
 function tabOf(v: string | string[] | undefined): RotinaTab {
   const s = Array.isArray(v) ? v[0] : v;
-  return s === "habitos" || s === "tempo" ? s : "tarefas";
+  return TABS.includes(s as RotinaTab) ? (s as RotinaTab) : "tarefas";
 }
 
-/** Rotina (ARCHITECTURE §7.5): Tarefas (Hoje · Semana · Backlog) · Hábitos (12 semanas) · Tempo. Só carrega a aba aberta. */
+/**
+ * Rotina (Fase P): Tarefas por projeto · Projetos · Foco (pomodoro/cronômetro) · Tempo (análise) · Hábitos.
+ * Só carrega a aba aberta.
+ */
 export default async function RotinaPage(props: PageProps<"/rotina">) {
   const tab = tabOf((await props.searchParams).aba);
   const now = new Date();
@@ -21,11 +28,19 @@ export default async function RotinaPage(props: PageProps<"/rotina">) {
   if (tab === "habitos") {
     const d = await loadHabits(today);
     body = <HabitBoard habits={d.habits} logs={d.logs} today={today} />;
+  } else if (tab === "projetos") {
+    body = <ProjectGrid projects={await loadProjectStats(now)} today={today} />;
+  } else if (tab === "foco") {
+    const [tasks, focus] = await Promise.all([loadWorkTasks(now), loadFocus(now)]);
+    body = <FocusPanel tasks={tasks.open} focusGoalMinutes={focus.focusGoalMinutes} />;
   } else if (tab === "tempo") {
-    body = <TimePanel data={await loadTime(today)} today={today} serverNow={now.toISOString()} />;
+    const [entries, projects, focus] = await Promise.all([loadTimeEntries(now), loadProjects(true), loadFocus(now)]);
+    body = (
+      <TimeAnalytics entries={entries} projects={projects} today={today} serverNow={now.toISOString()} focusGoalMinutes={focus.focusGoalMinutes} />
+    );
   } else {
-    const d = await loadTasks(today);
-    body = <TaskBoard open={d.open} doneToday={d.doneToday} today={today} />;
+    const [tasks, projects] = await Promise.all([loadWorkTasks(now), loadProjects()]);
+    body = <TaskBoard open={tasks.open} doneToday={tasks.doneToday} today={today} projects={projects} />;
   }
 
   return (

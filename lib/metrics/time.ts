@@ -14,6 +14,7 @@ export interface TimeEntryRow {
   task_id: string | null;
   kind: "timer" | "pomodoro" | "manual";
   label: string | null;
+  planned_minutes?: number | null;
 }
 
 export type Granularity = "day" | "week" | "month";
@@ -26,6 +27,13 @@ export interface Range {
 export function entryMinutes(e: Pick<TimeEntryRow, "started_at" | "ended_at">, now: Date): number {
   const end = e.ended_at ? new Date(e.ended_at) : now;
   return Math.max(0, Math.round((end.getTime() - new Date(e.started_at).getTime()) / 60_000));
+}
+
+/** Pomodoro completo: fechado e com pelo menos o tempo planejado (1 min de folga). */
+export function isCompletePomodoro(e: Pick<TimeEntryRow, "kind" | "started_at" | "ended_at" | "planned_minutes">): boolean {
+  if (e.kind !== "pomodoro" || !e.ended_at) return false;
+  const m = (new Date(e.ended_at).getTime() - new Date(e.started_at).getTime()) / 60_000;
+  return m >= (e.planned_minutes ?? 25) - 1;
 }
 
 export const entryDay = (e: Pick<TimeEntryRow, "started_at">): ISODate => todayISO(new Date(e.started_at));
@@ -90,7 +98,7 @@ export function summarize(entries: readonly TimeEntryRow[], r: Range, now: Date)
     const m = entryMinutes(e, now);
     total += m;
     sessions++;
-    if (e.kind === "pomodoro") pomodoros++;
+    if (isCompletePomodoro(e)) pomodoros++;
     const key = e.project_id ?? "none";
     const slot = byDay.get(d)!;
     slot.minutes += m;

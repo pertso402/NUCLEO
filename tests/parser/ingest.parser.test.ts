@@ -32,6 +32,9 @@ interface Expected {
   date?: string | null;
   label_includes?: string;
   minutes?: number;
+  // projetos (Fase P): null = tem que vir null
+  project_ref?: string | null;
+  pomodoro?: boolean;
   // pipeline
   count?: number;
   channel?: string;
@@ -52,6 +55,7 @@ const fixtures = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../fixtures
     habits: string[];
     openTasks: string[];
     goals: string[];
+    projects?: string[];
     leads: string[];
     openTimer: { label: string | null; minutes: number } | null;
   };
@@ -110,6 +114,12 @@ function mismatches(call: ToolCall, exp: Expected): string[] {
   }
   if (call.name === "start_timer" && exp.label_includes && !norm(call.args.label).includes(norm(exp.label_includes))) {
     out.push(`timer "${call.args.label}" sem "${exp.label_includes}"`);
+  }
+  if (call.name === "start_timer" && exp.pomodoro !== undefined && call.args.pomodoro !== exp.pomodoro) out.push(`pomodoro ${call.args.pomodoro} ≠ ${exp.pomodoro}`);
+  if (exp.project_ref !== undefined && (call.name === "add_task" || call.name === "start_timer" || call.name === "log_time")) {
+    const got = call.args.project_ref;
+    const ok = exp.project_ref === null ? got === null : got !== null && norm(got) === norm(exp.project_ref);
+    if (!ok) out.push(`projeto ${JSON.stringify(got)} ≠ ${JSON.stringify(exp.project_ref)}`);
   }
   if (call.name === "log_time") {
     if (exp.minutes !== undefined && call.args.minutes !== exp.minutes) out.push(`minutos ${call.args.minutes} ≠ ${exp.minutes}`);

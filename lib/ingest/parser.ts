@@ -13,6 +13,8 @@ export interface ParserContext {
   openTasks?: string[];
   /** Objetivos ativos (títulos). */
   goals?: string[];
+  /** Projetos/negócios ativos (nomes). */
+  projects?: string[];
   /** Leads do pipeline: "Nome · Empresa · etapa" (máx. ~60). */
   leads?: string[];
   /** Timer rodando agora, se houver. */
@@ -84,7 +86,8 @@ export function buildSystemPrompt(ctx: ParserContext): string {
     "- 'fiz/mandei/terminei/concluí' + algo das tarefas abertas = complete_task (copie o título da lista). Se não estiver na lista e for hábito, log_habit; senão ask_clarification.",
     "- 'fiz academia', 'treinei', 'li', 'meditei' = log_habit com o nome EXATO do hábito da lista. Vários hábitos = várias chamadas. Hábito fora da lista = ask_clarification.",
     "- 'li 20 min' é o hábito de leitura (log_habit), não log_time. log_time é para trabalho ('trabalhei 2h no site').",
-    "- 'começa timer X' / 'bora focar em X' = start_timer; 'para o timer' / 'parei o foco' = stop_timer.",
+    "- 'começa timer X' / 'bora focar em X' = start_timer (pomodoro false); 'começa pomodoro X' / 'pomodoro no X' = start_timer com pomodoro true. 'para o timer' / 'parei o foco' / 'para o pomodoro' = stop_timer.",
+    "- Projetos: add_task, start_timer e log_time têm project_ref. Preencha com o nome EXATO da lista de projetos quando ele citar o projeto/negócio/cliente ('no Choppatinhas', 'pra ARTe', 'do NÚCLEO') ou quando a tarefa aberta citada for claramente dele. Tire o nome do projeto do label/título ('pomodoro no cardápio do Choppatinhas' → label 'cardápio', project_ref 'Choppatinhas'). Sem projeto claro = null.",
     "- Dinheiro junto com hábito ou tarefa na mesma mensagem: uma chamada para cada coisa.",
     "",
     "Pipeline (leads):",
@@ -103,6 +106,7 @@ export function buildSystemPrompt(ctx: ParserContext): string {
     `Hábitos ativos: ${quoted(ctx.habits, "nenhum cadastrado")}.`,
     `Tarefas abertas: ${quoted(ctx.openTasks, "nenhuma")}.`,
     `Objetivos ativos: ${quoted(ctx.goals, "nenhum")}.`,
+    `Projetos: ${quoted(ctx.projects, "nenhum")}.`,
     `Leads: ${quoted(ctx.leads, "nenhum")}.`,
     `Timer: ${timer}.`,
   ].join("\n");
