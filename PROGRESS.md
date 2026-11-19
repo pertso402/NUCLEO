@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 3 (aceite das Fases 1 e 2 pendente — ver Bloqueios; o Peter pediu para seguir e deixar o crédito da OpenAI para depois)
-**Próxima tarefa:** P.1 aplicar `20261119120000_productivity.sql` no SQL Editor → conferir via REST → merge do branch `fase-p` na main (deploy). O código de P.2–P.7 está pronto no branch e só pode ir pra produção depois da migration.
+**Próxima tarefa:** Fase P no ar — conferir os critérios de aceite usando de verdade (criar projetos, pomodoro numa tarefa, "começa pomodoro…" pelo WhatsApp/Siri). Depois, Fase 4 (precisa das credenciais do Pluggy).
 
 ---
 
@@ -74,11 +74,11 @@
 ---
 
 ## Fase P — Produtividade (pedido do Peter em 19/11, antes da Fase 4)
-- [ ] P.1 Migration: `projects` (negócio/cliente/projeto/pessoal/estudo, cor, meta de horas/semana, prazo), `tasks.project_id` + estimativa + status `doing`, `time_entries.project_id/task_id/kind/planned_minutes`, configurações do pomodoro — **pronta e validada**, falta aplicar
-- [x] P.2 Tela de Projetos (lista, criar/editar, detalhe com tarefas e horas) — no branch `fase-p`
-- [x] P.3 Tarefas por projeto (agrupadas, filtros, "fazendo", estimativa × realizado) — no branch `fase-p`
-- [x] P.4 Pomodoro + cronômetro global (visível em todas as telas, ligado a tarefa/projeto) — no branch `fase-p`
-- [x] P.5 Análise de tempo: dia/semana/mês, comparação com o período anterior, por projeto, evolução, horários — no branch `fase-p`
+- [x] P.1 Migration: `projects` (negócio/cliente/projeto/pessoal/estudo, cor, meta de horas/semana, prazo), `tasks.project_id` + estimativa + status `doing`, `time_entries.project_id/task_id/kind/planned_minutes`, configurações do pomodoro — aplicada em 19/11 e conferida via REST
+- [x] P.2 Tela de Projetos (lista, criar/editar, detalhe com tarefas e horas)
+- [x] P.3 Tarefas por projeto (agrupadas, filtros, "fazendo", estimativa × realizado)
+- [x] P.4 Pomodoro + cronômetro global (visível em todas as telas, ligado a tarefa/projeto)
+- [x] P.5 Análise de tempo: dia/semana/mês, comparação com o período anterior, por projeto, evolução, horários
 - [x] P.6 Parser entende projeto (tarefa, timer e tempo) — bateria real 50/50
 - [x] P.7 Layout mais bonito e dinâmico nas telas de rotina — vitrine em `/dev/rotina` (`?aba=…&foco=pomodoro|livre`)
 
@@ -239,3 +239,4 @@
 | 2026-11-16 | correção | "Não consegui transcrever agora" no botão de áudio: causa nos logs = formato do iPhone recusado pela OpenAI. WAV no navegador + fallback `whisper-1` no servidor; 4 testes; conferido no navegador que o app envia WAV (RIFF/WAVE) e em produção com fala gerada por TTS. |
 | 2026-11-19 | P.1 (parcial) | Migration `20261119120000_productivity.sql` validada em PGlite com todas as anteriores (12 checagens: paleta, meta semanal, estimativa, status doing, pomodoro, dono de projeto/tarefa entre usuários, set null ao apagar projeto, RLS). Gatilho de dono separado em duas funções (PL/pgSQL avalia `new.task_id` mesmo com a condição antes falsa). |
 | 2026-11-19 | P.2–P.7 | Branch `fase-p`: projetos (grade + detalhe), tarefas agrupadas por projeto com estimativa × realizado e "fazendo", foco global (pomodoro/cronômetro com pílula flutuante em todas as telas), aba Tempo (dia/semana/mês, comparação, por projeto, evolução 12 semanas/6 meses, mapa de horários), parser com `project_ref` e pomodoro. 282 testes + bateria do parser 50/50. Falta aplicar a migration para fazer merge. |
+| 2026-11-19 | P.1 ✓ + deploy | Peter aplicou a migration; conferida via REST (tabelas/colunas novas, status `doing`, check de cor recusa valor inválido). Merge de `fase-p` na main (899349c), deploy de produção pronto, sem erros nos logs. |
