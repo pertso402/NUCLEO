@@ -49,7 +49,7 @@ export async function loadTasks(today: ISODate): Promise<TasksData> {
   const supabase = await supa();
   const { from, to } = dayInstantRange(today);
   const [open, done] = await Promise.all([
-    supabase.from("tasks").select(TASK_COLS).eq("status", "todo").order("due_on", { ascending: true, nullsFirst: false }).limit(300),
+    supabase.from("tasks").select(TASK_COLS).in("status", ["todo", "doing"]).order("due_on", { ascending: true, nullsFirst: false }).limit(300),
     supabase
       .from("tasks")
       .select(TASK_COLS)

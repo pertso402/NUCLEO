@@ -61,7 +61,7 @@ export async function saveDailyReview(input: DailyReviewInput): Promise<ActionRe
       .from("tasks")
       .select("title")
       .eq("user_id", userId)
-      .eq("status", "todo")
+      .in("status", ["todo", "doing"])
       .eq("due_on", tomorrow);
     const have = new Set((existing ?? []).map((t) => String(t.title).trim().toLowerCase()));
     const fresh = top3.filter((t) => !have.has(t.toLowerCase()));

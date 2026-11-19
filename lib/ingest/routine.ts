@@ -89,7 +89,7 @@ export async function completeTask(args: Args<"complete_task">, ctx: ExecContext
     .update({ status: "done", completed_at: ctx.now.toISOString() })
     .eq("id", task.id)
     .eq("user_id", ctx.userId)
-    .eq("status", "todo");
+    .in("status", ["todo", "doing"]);
   if (error) throw new Error(`Falha ao concluir tarefa: ${error.message}`);
   ctx.routine.openTasks = open.filter((t) => t.id !== task.id);
 

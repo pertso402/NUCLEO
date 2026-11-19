@@ -9,7 +9,7 @@ export interface TaskLite {
   id: string;
   title: string;
   due_on: string | null;
-  status: "todo" | "done" | "dropped";
+  status: "todo" | "doing" | "done" | "dropped";
   moves_revenue: boolean;
   priority: number;
   completed_at: string | null;
@@ -25,7 +25,7 @@ export function bucketTasks<T extends TaskLite>(tasks: readonly T[], today: ISOD
   const out: Record<TaskBucket, T[]> = { hoje: [], semana: [], backlog: [] };
   const weekEnd = addDays(today, 7);
   for (const t of tasks) {
-    if (t.status !== "todo") continue;
+    if (t.status !== "todo" && t.status !== "doing") continue;
     if (t.due_on && t.due_on <= today) out.hoje.push(t);
     else if (t.due_on && t.due_on <= weekEnd) out.semana.push(t);
     else out.backlog.push(t);
@@ -40,7 +40,7 @@ export function bucketTasks<T extends TaskLite>(tasks: readonly T[], today: ISOD
 }
 
 export function isOverdue(t: Pick<TaskLite, "due_on" | "status">, today: ISODate): boolean {
-  return t.status === "todo" && !!t.due_on && t.due_on < today;
+  return (t.status === "todo" || t.status === "doing") && !!t.due_on && t.due_on < today;
 }
 
 // ------------------------------------------------------------------ hábitos

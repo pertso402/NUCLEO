@@ -65,7 +65,7 @@ export async function loadToday(
       .from("tasks")
       .select("id, title, due_on")
       .eq("user_id", userId)
-      .eq("status", "todo")
+      .in("status", ["todo", "doing"])
       .eq("moves_revenue", true)
       .order("due_on", { ascending: true, nullsFirst: false })
       .order("priority")

@@ -45,7 +45,7 @@ export async function loadRoutineState(supabase: SupabaseClient, userId: string)
       .from("tasks")
       .select("id, title, due_on, moves_revenue")
       .eq("user_id", userId)
-      .eq("status", "todo")
+      .in("status", ["todo", "doing"])
       .order("due_on", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(40),
