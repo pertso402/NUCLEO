@@ -18,19 +18,21 @@ export interface TaskLite {
 export type TaskBucket = "hoje" | "semana" | "backlog";
 
 /**
- * Hoje = atrasadas + vencendo hoje. Semana = próximos 7 dias. Backlog = sem prazo ou mais longe.
- * Dentro de cada grupo: faturamento primeiro, depois prazo, depois prioridade (1 = alta).
+ * Hoje = atrasadas + vencendo hoje + marcadas Agora (prioridade 0). Semana = próximos 7 dias. Backlog = sem prazo ou mais longe.
+ * Dentro de cada grupo: Agora primeiro, depois faturamento, depois prazo, depois prioridade (1 = alta).
  */
 export function bucketTasks<T extends TaskLite>(tasks: readonly T[], today: ISODate): Record<TaskBucket, T[]> {
   const out: Record<TaskBucket, T[]> = { hoje: [], semana: [], backlog: [] };
   const weekEnd = addDays(today, 7);
   for (const t of tasks) {
     if (t.status !== "todo" && t.status !== "doing") continue;
-    if (t.due_on && t.due_on <= today) out.hoje.push(t);
+    // Prioridade 0 = "Agora": entra em Hoje mesmo sem prazo.
+    if (t.priority === 0 || (t.due_on && t.due_on <= today)) out.hoje.push(t);
     else if (t.due_on && t.due_on <= weekEnd) out.semana.push(t);
     else out.backlog.push(t);
   }
   const sort = (a: T, b: T) =>
+    Number(a.priority !== 0) - Number(b.priority !== 0) ||
     Number(b.moves_revenue) - Number(a.moves_revenue) ||
     (a.due_on ?? "9999").localeCompare(b.due_on ?? "9999") ||
     a.priority - b.priority ||

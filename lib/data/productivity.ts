@@ -22,6 +22,19 @@ export interface Project {
   weekly_hours_goal: number | null;
   deadline: ISODate | null;
   position: number;
+  /** 0 urgente · 1 alta · 2 média · 3 baixa. */
+  priority: number;
+}
+
+/** Departamento de um projeto (Marketing, Comercial, Operação…). */
+export interface ProjectArea {
+  id: string;
+  project_id: string;
+  name: string;
+  priority: number;
+  /** As tarefas seguem uma ordem; só a primeira aberta é a próxima. */
+  sequential: boolean;
+  position: number;
 }
 
 export interface ProjectStats extends Project {
@@ -45,6 +58,9 @@ export interface WorkTask {
   goal_id: string | null;
   project_id: string | null;
   estimate_minutes: number | null;
+  area_id: string | null;
+  /** Posição na sequência do departamento. */
+  sequence: number | null;
   /** Minutos já registrados nessa tarefa. */
   trackedMinutes: number;
 }
@@ -59,9 +75,11 @@ export interface OpenFocus {
   task_id: string | null;
 }
 
-export const PROJECT_COLS = "id, name, kind, status, color, description, lead_id, goal_id, weekly_hours_goal, deadline, position";
+export const PROJECT_COLS =
+  "id, name, kind, status, color, description, lead_id, goal_id, weekly_hours_goal, deadline, position, priority";
 const TASK_COLS =
-  "id, title, notes, due_on, status, moves_revenue, priority, completed_at, goal_id, project_id, estimate_minutes";
+  "id, title, notes, due_on, status, moves_revenue, priority, completed_at, goal_id, project_id, estimate_minutes, area_id, sequence";
+const AREA_COLS = "id, project_id, name, priority, sequential, position";
 export const ENTRY_COLS = "id, started_at, ended_at, is_focus, project_id, task_id, kind, label, planned_minutes";
 
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
@@ -77,11 +95,41 @@ async function supa() {
 /** Projetos (sem arquivados, a menos que `withArchived`). */
 export async function loadProjects(withArchived = false): Promise<Project[]> {
   const supabase = await supa();
-  let q = supabase.from("projects").select(PROJECT_COLS).order("position").order("created_at");
+  let q = supabase.from("projects").select(PROJECT_COLS).order("priority").order("position").order("created_at");
   if (!withArchived) q = q.neq("status", "archived");
   const { data, error } = await q;
   if (error) throw new Error(`Falha ao ler projetos: ${error.message}`);
   return (data ?? []).map(toProject);
+}
+
+/** Departamentos (de um projeto ou de todos), por prioridade e posição. */
+export async function loadAreas(projectId?: string): Promise<ProjectArea[]> {
+  const supabase = await supa();
+  let q = supabase.from("project_areas").select(AREA_COLS).order("priority").order("position").order("created_at");
+  if (projectId) q = q.eq("project_id", projectId);
+  const { data, error } = await q;
+  if (error) throw new Error(`Falha ao ler departamentos: ${error.message}`);
+  return (data ?? []) as ProjectArea[];
+}
+
+/** Feitas e total por departamento (para o progresso de cada um). */
+export async function loadAreaProgress(projectId: string): Promise<Record<string, { done: number; total: number }>> {
+  const supabase = await supa();
+  const { data } = await supabase
+    .from("tasks")
+    .select("area_id, status")
+    .eq("project_id", projectId)
+    .not("area_id", "is", null)
+    .in("status", ["todo", "doing", "done"])
+    .limit(5000);
+  const out: Record<string, { done: number; total: number }> = {};
+  for (const t of data ?? []) {
+    const k = t.area_id as string;
+    out[k] ??= { done: 0, total: 0 };
+    out[k].total++;
+    if (t.status === "done") out[k].done++;
+  }
+  return out;
 }
 
 /** Projetos com números: tarefas abertas/feitas e horas na semana, no mês e no total. */

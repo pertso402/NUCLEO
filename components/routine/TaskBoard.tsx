@@ -1,13 +1,15 @@
 "use client";
 
 import { useOptimistic, useState, useTransition, type FormEvent } from "react";
-import { Check, CircleDollarSign, Clock3, Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { Check, CircleDollarSign, Clock3, Flame, ListOrdered, Pencil, Play, Plus, Trash2, Zap } from "lucide-react";
 import { useFocusMaybe } from "@/components/focus/FocusProvider";
 import { Button } from "@/components/ui/Button";
+import { PriorityChip, PriorityPicker } from "@/components/ui/Priority";
 import { cn } from "@/lib/cn";
 import { addDays } from "@/lib/dates";
-import type { Project, WorkTask } from "@/lib/data/productivity";
+import type { Project, ProjectArea, WorkTask } from "@/lib/data/productivity";
 import { bucketTasks, isOverdue, type TaskBucket } from "@/lib/metrics/routine";
+import { doNow } from "@/lib/metrics/sequence";
 import { fmtHours } from "@/lib/metrics/time";
 import { projectHex } from "@/lib/projects-palette";
 import { createTask, dropTask, setTaskDone, updateTask, type ActionResult } from "@/app/(app)/rotina/actions";
@@ -47,12 +49,15 @@ export function TaskBoard({
   doneToday,
   today,
   projects,
+  areas = [],
   projectId,
 }: {
   open: WorkTask[];
   doneToday: WorkTask[];
   today: string;
   projects: Project[];
+  /** Departamentos (para mostrar/editar o departamento e montar o "Fazer agora"). */
+  areas?: ProjectArea[];
   /** Fixa num projeto (tela do projeto): sem chips de filtro e nova tarefa já nasce nele. */
   projectId?: string;
 }) {
@@ -111,8 +116,61 @@ export function TaskBoard({
   const counts = new Map<string, number>();
   for (const t of state.open) counts.set(t.project_id ?? "none", (counts.get(t.project_id ?? "none") ?? 0) + 1);
 
+  const areaById = new Map(areas.map((a) => [a.id, a]));
+  // "Fazer agora": Agora + fazendo + a próxima de cada sequência (só projetos ativos).
+  const now = projectId ? [] : doNow(state.open, areas, activeProjects.filter((p) => p.status === "active"), 6);
+
   return (
     <div className="flex flex-col gap-4">
+      {now.length > 0 && (
+        <section aria-label="Fazer agora" className="edge-light relative overflow-hidden rounded-md border border-plasma/40 bg-bg-2/80 p-3">
+          <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-plasma shadow-glow-plasma" />
+          <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-text-0">
+            <Zap size={15} strokeWidth={2} className="text-plasma" aria-hidden /> Fazer agora
+            <span className="ml-auto text-xs font-normal text-text-2">o que destrava o resto</span>
+          </h3>
+          <ul className="flex flex-col">
+            {now.map(({ task: t, reason }) => {
+              const p = t.project_id ? projectById.get(t.project_id) : null;
+              const area = t.area_id ? areaById.get(t.area_id) : null;
+              return (
+                <li key={t.id} className="flex items-center gap-2.5 border-t border-line py-2 first:border-t-0">
+                  <button
+                    type="button"
+                    aria-label={`Concluir: ${t.title}`}
+                    onClick={() => run({ type: "done", id: t.id }, () => setTaskDone(t.id, true))}
+                    className="flex size-6 shrink-0 items-center justify-center rounded-full border border-line-strong transition-[border-color,background-color,transform] duration-150 hover:border-volt hover:bg-volt/10 active:scale-90"
+                  />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm text-text-0">{t.title}</span>
+                    <span className="flex min-w-0 items-center gap-1.5 text-xs text-text-2">
+                      <span aria-hidden className="size-1.5 shrink-0 rounded-full" style={{ background: projectHex(p?.color) }} />
+                      <span className="truncate">
+                        {p?.name ?? "Sem projeto"}
+                        {area ? ` · ${area.name}` : ""}
+                      </span>
+                      <span className={cn("shrink-0", reason === "agora" ? "text-ember" : reason === "fazendo" ? "text-plasma" : "text-text-1")}>
+                        · {reason === "agora" ? "agora" : reason === "fazendo" ? "fazendo" : "próxima"}
+                      </span>
+                    </span>
+                  </span>
+                  {focus && runningTaskId !== t.id && (
+                    <button
+                      type="button"
+                      aria-label={`Focar em ${t.title}`}
+                      onClick={() => focus.start({ kind: "pomodoro", task_id: t.id, project_id: t.project_id, label: t.title })}
+                      className="flex size-8 shrink-0 items-center justify-center rounded-full bg-plasma/15 text-plasma transition-[background-color,transform] duration-150 hover:bg-plasma/25 active:scale-90"
+                    >
+                      <Play size={14} strokeWidth={2} />
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
       <QuickAdd
         today={today}
         defaultDue={bucket === "hoje" ? today : null}
@@ -180,13 +238,14 @@ export function TaskBoard({
                 {g.tasks.map((t) =>
                   editing === t.id ? (
                     <li key={t.id} className="edge-light rounded-md border border-volt/30 bg-bg-2/80 p-3">
-                      <TaskEditor task={t} projects={activeProjects} onDone={() => setEditing(null)} onError={setError} />
+                      <TaskEditor task={t} projects={activeProjects} areas={areas} onDone={() => setEditing(null)} onError={setError} />
                     </li>
                   ) : (
                     <TaskRow
                       key={t.id}
                       task={t}
                       today={today}
+                      areaName={t.area_id ? areaById.get(t.area_id)?.name : undefined}
                       running={runningTaskId === t.id}
                       canFocus={Boolean(focus)}
                       onDone={() => run({ type: "done", id: t.id }, () => setTaskDone(t.id, true))}
@@ -249,6 +308,7 @@ function FilterChip({ on, onClick, label, n, hex }: { on: boolean; onClick: () =
 function TaskRow({
   task,
   today,
+  areaName,
   running,
   canFocus,
   onDone,
@@ -258,6 +318,7 @@ function TaskRow({
 }: {
   task: WorkTask;
   today: string;
+  areaName?: string;
   running: boolean;
   canFocus: boolean;
   onDone: () => void;
@@ -288,6 +349,14 @@ function TaskRow({
       <button type="button" onClick={onEdit} className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left">
         <span className="text-sm text-text-0">{task.title}</span>
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+          <PriorityChip value={task.priority} kind="task" hideMedium />
+          {areaName && (
+            <span className="flex items-center gap-1 text-text-1">
+              <ListOrdered size={11} strokeWidth={1.5} aria-hidden />
+              {areaName}
+              {task.sequence !== null ? ` #${task.sequence + 1}` : ""}
+            </span>
+          )}
           {doing && <span className="text-plasma">{running ? "focando agora" : "fazendo"}</span>}
           {task.due_on && (
             <span className={cn("num", late ? "text-ember" : "text-text-2")}>
@@ -298,8 +367,7 @@ function TaskRow({
           {(est || task.trackedMinutes > 0) && (
             <span className={cn("num flex items-center gap-1", over ? "text-ember" : "text-text-2")}>
               <Clock3 size={11} strokeWidth={1.5} aria-hidden />
-              {fmtHours(task.trackedMinutes)}
-              {est ? ` / ${fmtHours(est)}` : ""}
+              {task.trackedMinutes === 0 && est ? `~${fmtHours(est)}` : `${fmtHours(task.trackedMinutes)}${est ? ` / ${fmtHours(est)}` : ""}`}
             </span>
           )}
           {task.moves_revenue && (
@@ -394,6 +462,7 @@ function QuickAdd({
   const [money, setMoney] = useState(false);
   const [project, setProject] = useState<string>(defaultProject ?? "");
   const [estimate, setEstimate] = useState<number | null>(null);
+  const [urgent, setUrgent] = useState(false);
   const [pending, start] = useTransition();
 
   // Trocar o filtro de projeto muda o projeto da nova tarefa.
@@ -410,11 +479,19 @@ function QuickAdd({
     if (!title.trim()) return;
     onError(null);
     start(async () => {
-      const r = await createTask({ title, due_on: dueOn, moves_revenue: money, project_id: project || null, estimate_minutes: estimate });
+      const r = await createTask({
+        title,
+        due_on: dueOn,
+        moves_revenue: money,
+        project_id: project || null,
+        estimate_minutes: estimate,
+        priority: urgent ? 0 : 2,
+      });
       if (r.ok) {
         setTitle("");
         setMoney(false);
         setEstimate(null);
+        setUrgent(false);
       } else onError(r.error);
     });
   }
@@ -466,7 +543,15 @@ function QuickAdd({
               {fmtHours(m)}
             </button>
           ))}
-          <button type="button" aria-pressed={money} onClick={() => setMoney(!money)} className={cn(pill(money), "sm:ml-auto")}>
+          <button
+            type="button"
+            aria-pressed={urgent}
+            onClick={() => setUrgent(!urgent)}
+            className={cn(pill(false), urgent && "border-ember/60 bg-ember/15 text-ember", "sm:ml-auto")}
+          >
+            <Flame size={13} strokeWidth={1.75} aria-hidden /> Agora
+          </button>
+          <button type="button" aria-pressed={money} onClick={() => setMoney(!money)} className={pill(money)}>
             <CircleDollarSign size={13} strokeWidth={1.5} aria-hidden /> Faturamento
           </button>
         </div>
@@ -475,14 +560,16 @@ function QuickAdd({
   );
 }
 
-function TaskEditor({
+export function TaskEditor({
   task,
   projects,
+  areas = [],
   onDone,
   onError,
 }: {
   task: WorkTask;
   projects: Project[];
+  areas?: ProjectArea[];
   onDone: () => void;
   onError: (e: string | null) => void;
 }) {
@@ -491,7 +578,10 @@ function TaskEditor({
   const [money, setMoney] = useState(task.moves_revenue);
   const [project, setProject] = useState(task.project_id ?? "");
   const [estimate, setEstimate] = useState(task.estimate_minutes ? String(task.estimate_minutes) : "");
+  const [priority, setPriority] = useState(task.priority);
+  const [area, setArea] = useState(task.area_id ?? "");
   const [confirmDrop, setConfirmDrop] = useState(false);
+  const projectAreas = areas.filter((a) => a.project_id === project);
   const [pending, start] = useTransition();
 
   const act = (fn: () => Promise<ActionResult>) => {
@@ -513,8 +603,10 @@ function TaskEditor({
             title,
             due_on: due || null,
             moves_revenue: money,
-            priority: task.priority,
+            priority,
             project_id: project || null,
+            // departamento só vale se for do projeto escolhido
+            area_id: projectAreas.some((a) => a.id === area) ? area : null,
             estimate_minutes: est && est > 0 ? est : null,
           }),
         );
@@ -560,6 +652,22 @@ function TaskEditor({
           <CircleDollarSign size={13} strokeWidth={1.5} aria-hidden /> Faturamento
         </button>
       </div>
+      {projectAreas.length > 0 && (
+        <select
+          aria-label="Departamento"
+          value={projectAreas.some((a) => a.id === area) ? area : ""}
+          onChange={(e) => setArea(e.target.value)}
+          className="h-9 w-full appearance-none rounded-full border border-line bg-white/[0.04] px-3 text-xs text-text-1 focus:border-volt/50 focus:outline-none sm:w-56"
+        >
+          <option value="">Sem departamento</option>
+          {projectAreas.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+      )}
+      <PriorityPicker value={priority} onChange={setPriority} kind="task" />
       {task.trackedMinutes > 0 && <p className="num text-xs text-text-2">Registrado até agora: {fmtHours(task.trackedMinutes)}</p>}
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={pending || !title.trim()}>

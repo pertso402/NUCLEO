@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { CalendarClock, CheckCircle2, ListTodo, Plus } from "lucide-react";
+import { PriorityChip } from "@/components/ui/Priority";
 import { cn } from "@/lib/cn";
 import { addDays, type ISODate } from "@/lib/dates";
 import type { ProjectStats } from "@/lib/data/productivity";
@@ -102,7 +103,10 @@ function ProjectCard({ p, today }: { p: ProjectStats; today: ISODate }) {
             {p.name.trim().charAt(0).toUpperCase()}
           </span>
           <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-base font-semibold text-text-0">{p.name}</span>
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-base font-semibold text-text-0">{p.name}</span>
+              <PriorityChip value={p.priority} hideMedium />
+            </span>
             <span className="text-xs text-text-2">
               {PROJECT_KIND_LABEL[p.kind]}
               {p.status !== "active" && ` · ${STATUS_LABEL[p.status]}`} · {ago(p.lastActivity, today)}

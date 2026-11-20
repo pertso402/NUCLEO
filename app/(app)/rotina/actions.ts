@@ -47,18 +47,34 @@ const TaskSchema = z.object({
   title: z.string().trim().min(1, "Escreva a tarefa.").max(200),
   due_on: isoDate.nullable(),
   moves_revenue: z.boolean(),
-  priority: z.number().int().min(1).max(3).default(2),
+  priority: z.number().int().min(0).max(3).default(2),
   project_id: id.nullable().optional(),
+  area_id: id.nullable().optional(),
   estimate_minutes: z.number().int().min(1).max(6000).nullable().optional(),
 });
 export type TaskInput = z.input<typeof TaskSchema>;
+
+/** Próxima posição no fim da sequência do departamento. */
+export async function nextSequence(supabase: Supa, areaId: string): Promise<number> {
+  const { data } = await supabase
+    .from("tasks")
+    .select("sequence")
+    .eq("area_id", areaId)
+    .not("sequence", "is", null)
+    .order("sequence", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ? Number(data.sequence) + 1 : 0;
+}
 
 export async function createTask(input: TaskInput): Promise<ActionResult> {
   const parsed = TaskSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? INVALID.error };
   const supabase = await authed();
   if (!supabase) return NOT_AUTHED;
-  const { error } = await supabase.from("tasks").insert({ ...parsed.data, source: "app" });
+  // Num departamento, a tarefa nova entra no fim da sequência.
+  const sequence = parsed.data.area_id ? await nextSequence(supabase, parsed.data.area_id) : null;
+  const { error } = await supabase.from("tasks").insert({ ...parsed.data, sequence, source: "app" });
   return finish(error, "criar a tarefa");
 }
 
@@ -67,7 +83,15 @@ export async function updateTask(taskId: string, input: TaskInput): Promise<Acti
   if (!id.safeParse(taskId).success || !parsed.success) return INVALID;
   const supabase = await authed();
   if (!supabase) return NOT_AUTHED;
-  const { error } = await supabase.from("tasks").update(parsed.data).eq("id", taskId);
+  const patch: Record<string, unknown> = { ...parsed.data };
+  // Mudou de departamento: vai pro fim da sequência do novo.
+  if (parsed.data.area_id !== undefined) {
+    const { data: cur } = await supabase.from("tasks").select("area_id").eq("id", taskId).maybeSingle();
+    if (cur && cur.area_id !== parsed.data.area_id) {
+      patch.sequence = parsed.data.area_id ? await nextSequence(supabase, parsed.data.area_id) : null;
+    }
+  }
+  const { error } = await supabase.from("tasks").update(patch).eq("id", taskId);
   return finish(error, "salvar a tarefa");
 }
 

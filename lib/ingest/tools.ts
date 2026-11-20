@@ -63,12 +63,18 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       parameters: {
         type: "object",
         additionalProperties: false,
-        required: ["title", "due_on", "moves_revenue", "goal_ref", "project_ref"],
+        required: ["title", "due_on", "moves_revenue", "goal_ref", "project_ref", "area_ref", "priority"],
         properties: {
           title: { type: "string", description: "Tarefa curta no infinitivo, sem a data (ex.: 'Mandar proposta pra Sorveteria Gelato')" },
           due_on: { ...nullableString, description: "YYYY-MM-DD se ele disse quando ('sexta', 'amanhã', 'dia 20'); null = sem prazo" },
           moves_revenue: { type: "boolean", description: "true se mexe em faturamento: proposta, cobrança, follow-up de venda, fechar cliente, prospectar" },
           goal_ref: { ...nullableString, description: "Nome de um objetivo da lista, se a tarefa claramente serve a ele; senão null" },
+          area_ref: { ...nullableString, description: "Departamento do projeto (nome EXATO da lista de departamentos, ex.: 'Marketing'); null se ele não disse" },
+          priority: {
+            type: "string",
+            enum: ["agora", "alta", "media", "baixa"],
+            description: "'agora' se é urgente/pra já/imediato; 'alta' se importante/prioridade; 'baixa' se 'quando der'; senão 'media'",
+          },
           project_ref: { ...nullableString, description: "Projeto/negócio/cliente da lista de projetos (nome EXATO) a que isso pertence; null se ele não disse e não está claro" },
         },
       },
@@ -287,6 +293,8 @@ export const ToolCallSchema = z.discriminatedUnion("name", [
       moves_revenue: z.boolean(),
       goal_ref: z.string().nullable(),
       project_ref: z.string().nullable().default(null),
+      area_ref: z.string().nullable().default(null),
+      priority: z.enum(["agora", "alta", "media", "baixa"]).default("media"),
     }),
   }),
   z.object({ name: z.literal("complete_task"), args: z.object({ task_ref: z.string().trim().min(1) }) }),

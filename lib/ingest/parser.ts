@@ -15,6 +15,8 @@ export interface ParserContext {
   goals?: string[];
   /** Projetos/negócios ativos (nomes). */
   projects?: string[];
+  /** Departamentos: "Projeto › Departamento". */
+  areas?: string[];
   /** Leads do pipeline: "Nome · Empresa · etapa" (máx. ~60). */
   leads?: string[];
   /** Timer rodando agora, se houver. */
@@ -88,6 +90,7 @@ export function buildSystemPrompt(ctx: ParserContext): string {
     "- 'li 20 min' é o hábito de leitura (log_habit), não log_time. log_time é para trabalho ('trabalhei 2h no site').",
     "- 'começa timer X' / 'bora focar em X' = start_timer (pomodoro false); 'começa pomodoro X' / 'pomodoro no X' = start_timer com pomodoro true. 'para o timer' / 'parei o foco' / 'para o pomodoro' = stop_timer.",
     "- Projetos: add_task, start_timer e log_time têm project_ref. Preencha com o nome EXATO da lista de projetos quando ele citar o projeto/negócio/cliente ('no Choppatinhas', 'pra ARTe', 'do NÚCLEO') ou quando a tarefa aberta citada for claramente dele. Tire o nome do projeto do label/título ('pomodoro no cardápio do Choppatinhas' → label 'cardápio', project_ref 'Choppatinhas'). Sem projeto claro = null.",
+    "- add_task.area_ref: departamento citado ('no marketing do Choppatinhas', 'comercial da ARTe') com o nome EXATO da lista (só o departamento, sem o projeto); senão null. add_task.priority: 'agora' para urgente/pra já/agora/imediato/hoje sem falta; 'alta' para importante/prioridade; 'baixa' para quando der/sem pressa; senão 'media'.",
     "- Dinheiro junto com hábito ou tarefa na mesma mensagem: uma chamada para cada coisa.",
     "",
     "Pipeline (leads):",
@@ -107,6 +110,7 @@ export function buildSystemPrompt(ctx: ParserContext): string {
     `Tarefas abertas: ${quoted(ctx.openTasks, "nenhuma")}.`,
     `Objetivos ativos: ${quoted(ctx.goals, "nenhum")}.`,
     `Projetos: ${quoted(ctx.projects, "nenhum")}.`,
+    `Departamentos (projeto › departamento): ${quoted(ctx.areas, "nenhum")}.`,
     `Leads: ${quoted(ctx.leads, "nenhum")}.`,
     `Timer: ${timer}.`,
   ].join("\n");

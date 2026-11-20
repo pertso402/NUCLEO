@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { PriorityPicker } from "@/components/ui/Priority";
 import { cn } from "@/lib/cn";
 import type { Project } from "@/lib/data/productivity";
 import { PROJECT_COLOR_KEYS, PROJECT_COLORS, PROJECT_KINDS, type ProjectColor, type ProjectKind } from "@/lib/projects-palette";
@@ -27,6 +28,7 @@ export function ProjectForm({
   const [hours, setHours] = useState(project?.weekly_hours_goal ? String(project.weekly_hours_goal) : "");
   const [deadline, setDeadline] = useState(project?.deadline ?? "");
   const [description, setDescription] = useState(project?.description ?? "");
+  const [priority, setPriority] = useState(project?.priority ?? 2);
   const [error, setError] = useState<string | null>(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [pending, start] = useTransition();
@@ -38,7 +40,7 @@ export function ProjectForm({
       setError("Meta de horas entre 0,5 e 168.");
       return;
     }
-    const input = { name, kind, color, weekly_hours_goal: h, deadline: deadline || null, description: description || null };
+    const input = { name, kind, color, weekly_hours_goal: h, deadline: deadline || null, description: description || null, priority };
     start(async () => {
       const r = project ? await updateProject(project.id, input) : await createProject(input);
       if (r.ok) onDone("id" in r && typeof r.id === "string" ? r.id : project?.id);
@@ -95,6 +97,7 @@ export function ProjectForm({
           </button>
         ))}
       </div>
+      <PriorityPicker value={priority} onChange={setPriority} />
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1 text-xs text-text-2">
           Meta h/semana

@@ -3,13 +3,15 @@ import { FocusPanel } from "@/components/focus/FocusPanel";
 import { FocusPill } from "@/components/focus/FocusPill";
 import { FocusProvider } from "@/components/focus/FocusProvider";
 import { GridBackground } from "@/components/hud/GridBackground";
+import { AreaBoard } from "@/components/projects/AreaBoard";
 import { ProjectGrid } from "@/components/projects/ProjectGrid";
+import { ProjectHeader } from "@/components/projects/ProjectHeader";
 import { HabitBoard } from "@/components/routine/HabitBoard";
 import { RotinaTabs } from "@/components/routine/RotinaTabs";
 import { TaskBoard } from "@/components/routine/TaskBoard";
 import { TimeAnalytics } from "@/components/time/TimeAnalytics";
 import { PageHeader } from "@/components/ui/PageHeader";
-import type { OpenFocus, Project, ProjectStats, WorkTask } from "@/lib/data/productivity";
+import type { OpenFocus, Project, ProjectArea, ProjectStats, WorkTask } from "@/lib/data/productivity";
 import type { Habit, RotinaTab } from "@/lib/data/routine";
 import { addDays, formatLongDate, startOfDayInstant, todayISO } from "@/lib/dates";
 import { DEFAULT_POMODORO } from "@/lib/metrics/pomodoro";
@@ -17,17 +19,17 @@ import { entryDay, entryMinutes, type TimeEntryRow } from "@/lib/metrics/time";
 
 /**
  * Vitrine de desenvolvimento da Rotina com dados fictícios (404 em produção).
- * `?aba=projetos|foco|tempo|habitos`, `&vazio=1` para os estados vazios, `&foco=pomodoro|livre` para simular foco rodando.
+ * `?aba=projetos|foco|tempo|habitos` (`&projeto=1` abre o detalhe do Choppatinhas com departamentos), `&vazio=1` para os estados vazios, `&foco=pomodoro|livre` para simular foco rodando.
  * Não use os botões de salvar aqui: eles falam com o banco de verdade.
  */
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
 const PROJECTS: Project[] = [
-  { id: id(101), name: "Choppatinhas", kind: "cliente", status: "active", color: "amber", description: "Cardápio digital + tráfego", lead_id: null, goal_id: null, weekly_hours_goal: 10, deadline: null, position: 0 },
-  { id: id(102), name: "ARTe", kind: "negocio", status: "active", color: "violet", description: "Agência", lead_id: null, goal_id: null, weekly_hours_goal: 15, deadline: null, position: 1 },
-  { id: id(103), name: "Padaria Pão Quente", kind: "cliente", status: "active", color: "cyan", description: null, lead_id: null, goal_id: null, weekly_hours_goal: 6, deadline: "2026-11-28", position: 2 },
-  { id: id(104), name: "NÚCLEO", kind: "projeto", status: "active", color: "lime", description: "Meu Jarvis", lead_id: null, goal_id: null, weekly_hours_goal: null, deadline: null, position: 3 },
-  { id: id(105), name: "Inglês", kind: "estudo", status: "paused", color: "pink", description: null, lead_id: null, goal_id: null, weekly_hours_goal: 3, deadline: null, position: 4 },
+  { id: id(101), name: "Choppatinhas", kind: "cliente", status: "active", color: "amber", description: "Cardápio digital + tráfego", lead_id: null, goal_id: null, weekly_hours_goal: 10, deadline: null, position: 0, priority: 0 },
+  { id: id(102), name: "ARTe", kind: "negocio", status: "active", color: "violet", description: "Agência", lead_id: null, goal_id: null, weekly_hours_goal: 15, deadline: null, position: 1, priority: 1 },
+  { id: id(103), name: "Padaria Pão Quente", kind: "cliente", status: "active", color: "cyan", description: null, lead_id: null, goal_id: null, weekly_hours_goal: 6, deadline: "2026-11-28", position: 2, priority: 2 },
+  { id: id(104), name: "NÚCLEO", kind: "projeto", status: "active", color: "lime", description: "Meu Jarvis", lead_id: null, goal_id: null, weekly_hours_goal: null, deadline: null, position: 3, priority: 2 },
+  { id: id(105), name: "Inglês", kind: "estudo", status: "paused", color: "pink", description: null, lead_id: null, goal_id: null, weekly_hours_goal: 3, deadline: null, position: 4, priority: 3 },
 ];
 
 function fake(today: string) {
@@ -43,6 +45,8 @@ function fake(today: string) {
     goal_id: null,
     project_id: null,
     estimate_minutes: null,
+    area_id: null,
+    sequence: null,
     trackedMinutes: 0,
     ...p,
   });
@@ -55,6 +59,22 @@ function fake(today: string) {
     task(6, { title: "Tela de projetos no NÚCLEO", project_id: id(104), status: "doing", trackedMinutes: 140 }),
     task(7, { title: "Renovar a CNH", due_on: today }),
     task(8, { title: "Estudar Meta Ads avançado" }),
+  ];
+  // Choppatinhas por departamento, em sequência
+  tasks.push(
+    task(11, { title: "Definir a oferta da semana", project_id: id(101), area_id: id(201), sequence: 0, priority: 1, estimate_minutes: 30 }),
+    task(12, { title: "Gravar 3 reels do chopp gelado", project_id: id(101), area_id: id(201), sequence: 1, estimate_minutes: 90 }),
+    task(13, { title: "Subir campanha no Meta Ads", project_id: id(101), area_id: id(201), sequence: 2, estimate_minutes: 45 }),
+    task(14, { title: "Responder orçamentos de eventos", project_id: id(101), area_id: id(202), sequence: 0, priority: 0, moves_revenue: true }),
+    task(15, { title: "Ligar para os 5 bares da lista", project_id: id(101), area_id: id(202), sequence: 1, moves_revenue: true }),
+    task(16, { title: "Repor estoque de copos", project_id: id(101), area_id: id(203), priority: 1 }),
+    task(17, { title: "Treinar o novo atendente", project_id: id(101), area_id: id(203) }),
+  );
+  tasks[0] = { ...tasks[0]!, area_id: id(203) };
+  const areas: ProjectArea[] = [
+    { id: id(201), project_id: id(101), name: "Marketing", priority: 1, sequential: true, position: 0 },
+    { id: id(202), project_id: id(101), name: "Comercial", priority: 0, sequential: true, position: 1 },
+    { id: id(203), project_id: id(101), name: "Operação", priority: 2, sequential: false, position: 2 },
   ];
   const done = [task(9, { title: "Reunião com a Pizzaria Forno", status: "done", completed_at: new Date().toISOString(), project_id: id(102), trackedMinutes: 45 })];
 
@@ -104,7 +124,7 @@ function fake(today: string) {
       lastActivity: mine[0]?.started_at ?? null,
     };
   });
-  return { tasks, done, entries, stats };
+  return { tasks, done, entries, stats, areas };
 }
 
 const HABITS: Habit[] = [
@@ -138,10 +158,22 @@ export default async function DevRotinaPage(props: PageProps<"/dev/rotina">) {
         <PageHeader title="Rotina" kicker={formatLongDate(today)} />
         <RotinaTabs active={tab} base="/dev/rotina" />
         {tab === "tarefas" && (
-          <TaskBoard open={empty ? [] : d.tasks} doneToday={empty ? [] : d.done} today={today} projects={empty ? [] : PROJECTS} />
+          <TaskBoard open={empty ? [] : d.tasks} doneToday={empty ? [] : d.done} today={today} projects={empty ? [] : PROJECTS} areas={empty ? [] : d.areas} />
         )}
-        {tab === "projetos" && <ProjectGrid projects={empty ? [] : d.stats} today={today} />}
-        {tab === "foco" && <FocusPanel tasks={empty ? [] : d.tasks} focusGoalMinutes={240} />}
+        {tab === "projetos" && !sp.projeto && <ProjectGrid projects={empty ? [] : d.stats} today={today} />}
+        {tab === "projetos" && sp.projeto && (
+          <>
+            <ProjectHeader project={PROJECTS[0]!} />
+            <AreaBoard
+              project={PROJECTS[0]!}
+              areas={empty ? [] : d.areas}
+              tasks={d.tasks.filter((t) => t.project_id === id(101))}
+              progress={{ [id(201)]: { done: 2, total: 5 }, [id(202)]: { done: 0, total: 2 }, [id(203)]: { done: 4, total: 7 } }}
+              allProjects={PROJECTS}
+            />
+          </>
+        )}
+        {tab === "foco" && <FocusPanel tasks={empty ? [] : d.tasks} areas={d.areas} focusGoalMinutes={240} />}
         {tab === "tempo" && (
           <TimeAnalytics entries={empty ? [] : d.entries} projects={PROJECTS} today={today} serverNow={now.toISOString()} focusGoalMinutes={240} />
         )}

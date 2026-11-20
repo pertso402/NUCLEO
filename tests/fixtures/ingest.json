@@ -549,6 +549,41 @@
           "project_ref": null
         }
       ]
+    },
+    {
+      "text": "no marketing do Choppatinhas: gravar 3 reels do chopp gelado",
+      "expect": [
+        {
+          "tool": "add_task",
+          "title_includes": "reels",
+          "project_ref": "Choppatinhas",
+          "area_ref": "Marketing"
+        }
+      ]
+    },
+    {
+      "text": "urgente: responder os orçamentos de eventos no comercial do Choppatinhas",
+      "expect": [
+        {
+          "tool": "add_task",
+          "title_includes": "orçamentos",
+          "project_ref": "Choppatinhas",
+          "area_ref": "Comercial",
+          "priority": "agora"
+        }
+      ]
+    },
+    {
+      "text": "quando der, organizar o drive da ARTe",
+      "expect": [
+        {
+          "tool": "add_task",
+          "title_includes": "drive",
+          "project_ref": "ARTe",
+          "area_ref": null,
+          "priority": "baixa"
+        }
+      ]
     }
   ],
   "context": {
@@ -578,6 +613,12 @@
       "ARTe",
       "Padaria Pão Quente",
       "NÚCLEO"
+    ],
+    "areas": [
+      "Choppatinhas › Marketing",
+      "Choppatinhas › Comercial",
+      "Choppatinhas › Operação",
+      "ARTe › Comercial"
     ]
   },
   "_context_comment": "Rotina que o parser enxerga em todos os casos (hábitos, tarefas abertas, objetivos, timer rodando)."

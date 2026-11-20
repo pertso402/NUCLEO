@@ -279,6 +279,46 @@ describe("projetos (Fase P)", () => {
     ]);
   });
 
+  it("tarefa no departamento: herda o projeto, entra no fim da sequência e guarda a prioridade", async () => {
+    const AREAS = [
+      { id: "mk", name: "Marketing", project_id: "p1", sequential: true },
+      { id: "mk2", name: "Marketing", project_id: "p2", sequential: true },
+    ];
+    const { db, run } = setup({
+      seed: { tasks: [{ id: "old", user_id: U, title: "Oferta", area_id: "mk", sequence: 3, status: "todo" }] },
+      routine: { projects: PROJECTS, areas: AREAS },
+    });
+    const [a, b] = await run([
+      { name: "add_task", args: { title: "Gravar reels", due_on: null, moves_revenue: false, goal_ref: null, project_ref: "Choppatinhas", area_ref: "marketing", priority: "agora" } },
+      { name: "add_task", args: { title: "Post", due_on: null, moves_revenue: false, goal_ref: null, project_ref: null, area_ref: "Marketing", priority: "media" } },
+    ]);
+    expect(a!.line).toBe("✅ Tarefa: Gravar reels · Choppatinhas › Marketing (etapa 5) · 🔥 agora");
+    expect(db.tables.tasks![1]).toMatchObject({ project_id: "p1", area_id: "mk", sequence: 4, priority: 0 });
+    expect(b!.line).toContain('departamento "Marketing" existe em mais de um projeto');
+    const [c] = await run([
+      { name: "add_task", args: { title: "Logo", due_on: null, moves_revenue: false, goal_ref: null, project_ref: null, area_ref: "Choppatinhas › Marketing", priority: "alta" } },
+    ]);
+    expect(c!.line).toBe("✅ Tarefa: Logo · Choppatinhas › Marketing (etapa 6) · prioridade alta");
+    expect(db.tables.tasks![2]).toMatchObject({ area_id: null, priority: 2 });
+  });
+
+  it("concluir etapa avisa a próxima da sequência", async () => {
+    const { run } = setup({
+      seed: { tasks: [{ id: "t1", user_id: U, title: "Definir oferta", status: "todo" }] },
+      routine: {
+        projects: PROJECTS,
+        areas: [{ id: "mk", name: "Marketing", project_id: "p1", sequential: true }],
+        openTasks: [
+          { id: "t2", title: "Subir campanha", due_on: null, moves_revenue: false, project_id: "p1", area_id: "mk", sequence: 2 },
+          { id: "t1", title: "Definir oferta", due_on: null, moves_revenue: false, project_id: "p1", area_id: "mk", sequence: 0 },
+          { id: "t3", title: "Gravar reels", due_on: null, moves_revenue: false, project_id: "p1", area_id: "mk", sequence: 1 },
+        ],
+      },
+    });
+    const [o] = await run([{ name: "complete_task", args: { task_ref: "definir oferta" } }]);
+    expect(o!.line).toBe("✅ Feita: Definir oferta\n➡️ Próxima em Marketing: Gravar reels");
+  });
+
   it("pomodoro esquecido fecha no tempo planejado (não conta o que não foi trabalhado)", async () => {
     const started = new Date(NOW.getTime() - 3 * 3_600_000).toISOString();
     const { db, run } = setup({

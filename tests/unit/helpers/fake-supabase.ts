@@ -5,7 +5,7 @@ type Filter = (r: Row) => boolean;
 
 /**
  * Supabase em memória, só o suficiente para os testes do ingest: insert/select/update/delete,
- * filtros eq/neq/is/in/gte/lt, order/limit, single/maybeSingle. Gera `id` e respeita as
+ * filtros eq/neq/is/not(is)/in/gte/lt, order/limit, single/maybeSingle. Gera `id` e respeita as
  * chaves únicas passadas em `unique` (erro 23505, como o Postgres) e os `defaults` das colunas.
  */
 export function fakeSupabase(
@@ -21,6 +21,7 @@ export function fakeSupabase(
   const from = (table: string) => {
     tables[table] ??= [];
     const filters: Filter[] = [];
+    const sorters: ((a: Row, b: Row) => number)[] = [];
     let op: "select" | "insert" | "update" | "delete" = "select";
     let payload: Row | Row[] | null = null;
     let limitN: number | null = null;
@@ -44,6 +45,8 @@ export function fakeSupabase(
         return { data: one ? out[0] ?? null : returning ? out : null, error: null };
       }
       const hit = rows.filter((r) => filters.every((f) => f(r)));
+      // ordenação estável só na leitura (múltiplos .order() = desempate em sequência)
+      if (sorters.length && op === "select") hit.sort((x, y) => sorters.reduce((acc, f) => acc || f(x, y), 0));
       if (op === "update") {
         for (const r of hit) Object.assign(r, payload);
         log.push({ table, op, payload: { ids: hit.map((r) => r.id), patch: payload } });
@@ -68,10 +71,20 @@ export function fakeSupabase(
       eq: (c: string, v: unknown) => (filters.push((r) => r[c] === v), b),
       neq: (c: string, v: unknown) => (filters.push((r) => r[c] !== v), b),
       is: (c: string, v: unknown) => (filters.push((r) => (r[c] ?? null) === v), b),
+      not: (c: string, op: string, v: unknown) => (filters.push((r) => (op === "is" ? (r[c] ?? null) !== v : true)), b),
       in: (c: string, v: unknown[]) => (filters.push((r) => v.includes(r[c])), b),
       gte: (c: string, v: unknown) => (filters.push((r) => String(r[c]) >= String(v)), b),
       lt: (c: string, v: unknown) => (filters.push((r) => String(r[c]) < String(v)), b),
-      order: () => b,
+      order: (c: string, o?: { ascending?: boolean }) => (
+        sorters.push((x, y) => {
+          const [a, z] = [x[c] ?? null, y[c] ?? null];
+          if (a === z) return 0;
+          if (a === null) return 1;
+          if (z === null) return -1;
+          return (a < z ? -1 : 1) * (o?.ascending === false ? -1 : 1);
+        }),
+        b
+      ),
       limit: (n: number) => ((limitN = n), b),
       single: () => ((one = "single"), b),
       maybeSingle: () => ((one = "maybe"), b),
