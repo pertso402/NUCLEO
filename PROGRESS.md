@@ -4,7 +4,7 @@
 > registre decisões e escreva uma linha no Log. Uma fase só termina quando todos os critérios de aceite passam.
 
 **Fase atual:** 3 (aceite das Fases 1 e 2 pendente — ver Bloqueios; o Peter pediu para seguir e deixar o crédito da OpenAI para depois)
-**Próxima tarefa:** P.8 aplicar `20261119200000_project_areas.sql` no SQL Editor → conferir via REST → merge do branch `fase-p8` na main (deploy). Código pronto e testado no branch.
+**Próxima tarefa:** Fase P no ar (com departamentos/sequência) — usar de verdade e ajustar o que incomodar. Depois, Fase 4 (precisa das credenciais do Pluggy).
 
 ---
 
@@ -81,7 +81,7 @@
 - [x] P.5 Análise de tempo: dia/semana/mês, comparação com o período anterior, por projeto, evolução, horários
 - [x] P.6 Parser entende projeto (tarefa, timer e tempo) — bateria real 50/50
 - [x] P.7 Layout mais bonito e dinâmico nas telas de rotina — vitrine em `/dev/rotina` (`?aba=…&foco=pomodoro|livre`)
-- [ ] P.8 Departamentos por projeto (Marketing, Comercial, Operação…), prioridade (projeto, departamento e tarefa: urgente/agora · alta · média · baixa), sequência de tarefas por departamento e "Fazer agora" — código pronto no branch `fase-p8`, falta aplicar a migration
+- [x] P.8 Departamentos por projeto (Marketing, Comercial, Operação…), prioridade (projeto, departamento e tarefa: urgente/agora · alta · média · baixa), sequência de tarefas por departamento e "Fazer agora" — migration aplicada em 19/11, no ar
 
 **Critérios de aceite:** toda tarefa e todo minuto podem ter projeto · pomodoro roda em qualquer tela e grava o tempo na tarefa · vejo horas por dia/semana/mês e por projeto com comparação · "começa pomodoro no cardápio do Choppatinhas" funciona.
 
@@ -243,3 +243,4 @@
 | 2026-11-19 | P.2–P.7 | Branch `fase-p`: projetos (grade + detalhe), tarefas agrupadas por projeto com estimativa × realizado e "fazendo", foco global (pomodoro/cronômetro com pílula flutuante em todas as telas), aba Tempo (dia/semana/mês, comparação, por projeto, evolução 12 semanas/6 meses, mapa de horários), parser com `project_ref` e pomodoro. 282 testes + bateria do parser 50/50. Falta aplicar a migration para fazer merge. |
 | 2026-11-19 | P.1 ✓ + deploy | Peter aplicou a migration; conferida via REST (tabelas/colunas novas, status `doing`, check de cor recusa valor inválido). Merge de `fase-p` na main (899349c), deploy de produção pronto, sem erros nos logs. |
 | 2026-11-19 | P.8 (código) | Branch `fase-p8`: migration de departamentos validada em PGlite (16 checagens), quadro de departamentos no projeto (prioridade, sequência com ↑↓, próxima/na fila, adicionar etapa, mover tarefa solta), "Fazer agora" na aba Tarefas e na fila do Foco, prioridade no projeto/tarefa, parser com `area_ref` e `priority` (+ "próxima em Marketing" ao concluir). 292 testes + bateria do parser 53/53. |
+| 2026-11-19 | P.8 ✓ + deploy | Peter aplicou a migration; conferida via REST (tabela de departamentos, colunas novas, prioridade 0 aceita e 7 recusada em tarefas). Merge de `fase-p8` na main (a515e79), deploy de produção pronto, sem erros nos logs. |
