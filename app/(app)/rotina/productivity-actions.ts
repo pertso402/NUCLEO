@@ -5,7 +5,7 @@ import { z } from "zod";
 import { parseISODate, startOfDayInstant, todayISO } from "@/lib/dates";
 import { PROJECT_COLOR_KEYS } from "@/lib/projects-palette";
 import { createClient } from "@/lib/supabase/server";
-import type { ActionResult } from "./actions";
+import { nextSequence, type ActionResult } from "./actions";
 
 /**
  * Ações da Fase P (produtividade): projetos, foco (timer livre e pomodoro), status "fazendo"
@@ -55,6 +55,7 @@ const ProjectSchema = z.object({
   deadline: isoDate.nullable().optional(),
   lead_id: uuid.nullable().optional(),
   goal_id: uuid.nullable().optional(),
+  priority: z.number().int().min(0).max(3).optional(),
 });
 export type ProjectInput = z.input<typeof ProjectSchema>;
 
@@ -117,6 +118,83 @@ export async function setTaskDoing(taskId: string, doing: boolean): Promise<Acti
     .eq("id", taskId)
     .in("status", ["todo", "doing"]);
   return finish(error, "atualizar a tarefa");
+}
+
+// ------------------------------------------------------------------ departamentos e sequência
+
+const AreaSchema = z.object({
+  name: z.string().trim().min(1, "Dê um nome ao departamento.").max(60, "Nome longo demais (máx. 60)."),
+  priority: z.number().int().min(0).max(3),
+  sequential: z.boolean(),
+});
+export type AreaInput = z.input<typeof AreaSchema>;
+
+export async function createArea(projectId: string, input: AreaInput): Promise<ActionResult> {
+  const parsed = AreaSchema.safeParse(input);
+  if (!uuid.safeParse(projectId).success) return INVALID;
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  const a = await authed();
+  if (!a) return NOT_AUTHED;
+  const { count } = await a.supabase.from("project_areas").select("id", { count: "exact", head: true }).eq("project_id", projectId);
+  const { error } = await a.supabase.from("project_areas").insert({ ...parsed.data, project_id: projectId, position: count ?? 0 });
+  return finish(error, "criar o departamento");
+}
+
+export async function updateArea(areaId: string, input: AreaInput): Promise<ActionResult> {
+  const parsed = AreaSchema.safeParse(input);
+  if (!uuid.safeParse(areaId).success) return INVALID;
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  const a = await authed();
+  if (!a) return NOT_AUTHED;
+  const { error } = await a.supabase.from("project_areas").update(parsed.data).eq("id", areaId);
+  return finish(error, "salvar o departamento");
+}
+
+/** Apaga o departamento; as tarefas continuam no projeto, sem departamento. */
+export async function deleteArea(areaId: string): Promise<ActionResult> {
+  if (!uuid.safeParse(areaId).success) return INVALID;
+  const a = await authed();
+  if (!a) return NOT_AUTHED;
+  const { error } = await a.supabase.from("project_areas").delete().eq("id", areaId);
+  return finish(error, "apagar o departamento");
+}
+
+/** Grava a ordem da sequência (ids na ordem nova; só os do departamento são mexidos). */
+export async function reorderArea(areaId: string, orderedTaskIds: string[]): Promise<ActionResult> {
+  if (!uuid.safeParse(areaId).success || !z.array(uuid).max(500).safeParse(orderedTaskIds).success) return INVALID;
+  const a = await authed();
+  if (!a) return NOT_AUTHED;
+  const results = await Promise.all(
+    orderedTaskIds.map((taskId, i) => a.supabase.from("tasks").update({ sequence: i }).eq("id", taskId).eq("area_id", areaId)),
+  );
+  return finish(results.find((r) => r.error)?.error ?? null, "reordenar a sequência");
+}
+
+/** Coloca a tarefa num departamento (no fim da sequência) ou tira de qualquer um. */
+export async function setTaskArea(taskId: string, areaId: string | null): Promise<ActionResult> {
+  if (!uuid.safeParse(taskId).success || (areaId !== null && !uuid.safeParse(areaId).success)) return INVALID;
+  const a = await authed();
+  if (!a) return NOT_AUTHED;
+  const sequence = areaId ? await nextSequence(a.supabase, areaId) : null;
+  const { error } = await a.supabase.from("tasks").update({ area_id: areaId, sequence }).eq("id", taskId);
+  return finish(error, "mudar o departamento da tarefa");
+}
+
+/** Prioridade da tarefa: 0 agora · 1 alta · 2 média · 3 baixa. */
+export async function setTaskPriority(taskId: string, priority: number): Promise<ActionResult> {
+  if (!uuid.safeParse(taskId).success || !z.number().int().min(0).max(3).safeParse(priority).success) return INVALID;
+  const a = await authed();
+  if (!a) return NOT_AUTHED;
+  const { error } = await a.supabase.from("tasks").update({ priority }).eq("id", taskId);
+  return finish(error, "mudar a prioridade");
+}
+
+export async function setProjectPriority(projectId: string, priority: number): Promise<ActionResult> {
+  if (!uuid.safeParse(projectId).success || !z.number().int().min(0).max(3).safeParse(priority).success) return INVALID;
+  const a = await authed();
+  if (!a) return NOT_AUTHED;
+  const { error } = await a.supabase.from("projects").update({ priority }).eq("id", projectId);
+  return finish(error, "mudar a prioridade do projeto");
 }
 
 // ------------------------------------------------------------------ foco

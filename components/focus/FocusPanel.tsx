@@ -4,8 +4,9 @@ import { useMemo, useState, useTransition } from "react";
 import { Coffee, Pause, Play, Settings2, SkipForward, Square, Timer } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
-import type { WorkTask } from "@/lib/data/productivity";
+import type { ProjectArea, WorkTask } from "@/lib/data/productivity";
 import { formatClock, PHASE_LABEL } from "@/lib/metrics/pomodoro";
+import { doNow } from "@/lib/metrics/sequence";
 import { fmtHours } from "@/lib/metrics/time";
 import { projectHex } from "@/lib/projects-palette";
 import { savePomodoroSettings } from "@/app/(app)/rotina/productivity-actions";
@@ -15,7 +16,7 @@ const field =
   "h-11 w-full min-w-0 rounded-sm border border-line bg-white/[0.04] px-3 text-base text-text-0 placeholder:text-text-2 focus:border-plasma/60 focus:outline-none";
 
 /** Aba Foco: relógio grande (pomodoro ou livre), no que focar, ciclo do dia e fila de tarefas. */
-export function FocusPanel({ tasks, focusGoalMinutes }: { tasks: WorkTask[]; focusGoalMinutes: number }) {
+export function FocusPanel({ tasks, areas = [], focusGoalMinutes }: { tasks: WorkTask[]; areas?: ProjectArea[]; focusGoalMinutes: number }) {
   const f = useFocus();
   const v = f.view;
   const [mode, setMode] = useState<"pomodoro" | "timer">("pomodoro");
@@ -35,14 +36,14 @@ export function FocusPanel({ tasks, focusGoalMinutes }: { tasks: WorkTask[]; foc
   const todayMin = f.todayMinutes + runningMin;
   const goalPct = focusGoalMinutes > 0 ? Math.min(1, todayMin / focusGoalMinutes) : 0;
 
-  // Fila: o que está "fazendo" primeiro, depois prazo de hoje/atrasadas, depois o resto.
-  const queue = useMemo(
-    () =>
-      [...tasks]
-        .sort((a, b) => Number(b.status === "doing") - Number(a.status === "doing") || (a.due_on ?? "9999").localeCompare(b.due_on ?? "9999"))
-        .slice(0, 6),
-    [tasks],
-  );
+  // Fila: o "Fazer agora" (Agora, fazendo, próxima de cada sequência) e depois o resto por prioridade e prazo.
+  const queue = useMemo(() => {
+    const first = doNow(tasks, areas, f.projects.filter((p) => p.status === "active"), 6).map((x) => x.task);
+    const rest = [...tasks]
+      .filter((t) => !first.some((x) => x.id === t.id))
+      .sort((a, b) => a.priority - b.priority || (a.due_on ?? "9999").localeCompare(b.due_on ?? "9999"));
+    return [...first, ...rest].slice(0, 6);
+  }, [tasks, areas, f.projects]);
 
   const byProject = useMemo(() => {
     const groups = new Map<string, WorkTask[]>();

@@ -28,10 +28,20 @@ export interface RoutineState {
   /** Leads do pipeline (vivos e fechados recentes). */
   leads: LeadLite[];
   habits: { id: string; name: string }[];
-  openTasks: { id: string; title: string; due_on: string | null; moves_revenue: boolean; project_id?: string | null }[];
+  openTasks: {
+    id: string;
+    title: string;
+    due_on: string | null;
+    moves_revenue: boolean;
+    project_id?: string | null;
+    area_id?: string | null;
+    sequence?: number | null;
+  }[];
   goals: { id: string; title: string }[];
   /** Projetos/negócios ativos (Fase P). */
   projects: { id: string; name: string }[];
+  /** Departamentos dos projetos ativos (Fase P.8). */
+  areas?: { id: string; name: string; project_id: string; sequential: boolean }[];
   openTimer: {
     id: string;
     label: string | null;

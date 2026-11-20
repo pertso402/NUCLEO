@@ -32,7 +32,7 @@ export async function resolveOwnerId(supabase: SupabaseClient): Promise<string> 
 
 /** Hábitos, tarefas abertas, objetivos e timer: vão para o prompt e para as ferramentas. */
 export async function loadRoutineState(supabase: SupabaseClient, userId: string): Promise<RoutineState> {
-  const [leads, habits, tasks, goals, timer, projects] = await Promise.all([
+  const [leads, habits, tasks, goals, timer, projects, areas] = await Promise.all([
     supabase
       .from("crm_leads")
       .select("id, name, business, stage, next_action, next_action_on")
@@ -43,7 +43,7 @@ export async function loadRoutineState(supabase: SupabaseClient, userId: string)
     supabase.from("habits").select("id, name").eq("user_id", userId).eq("active", true).order("position"),
     supabase
       .from("tasks")
-      .select("id, title, due_on, moves_revenue, project_id")
+      .select("id, title, due_on, moves_revenue, project_id, area_id, sequence")
       .eq("user_id", userId)
       .in("status", ["todo", "doing"])
       .order("due_on", { ascending: true, nullsFirst: false })
@@ -57,8 +57,9 @@ export async function loadRoutineState(supabase: SupabaseClient, userId: string)
       .is("ended_at", null)
       .maybeSingle(),
     supabase.from("projects").select("id, name").eq("user_id", userId).eq("status", "active").order("position"),
+    supabase.from("project_areas").select("id, name, project_id, sequential").eq("user_id", userId).order("position"),
   ]);
-  for (const r of [leads, habits, tasks, goals, timer, projects]) {
+  for (const r of [leads, habits, tasks, goals, timer, projects, areas]) {
     if (r.error) throw new Error(`Falha ao ler a rotina: ${r.error.message}`);
   }
   return {
@@ -67,6 +68,10 @@ export async function loadRoutineState(supabase: SupabaseClient, userId: string)
     openTasks: (tasks.data ?? []) as RoutineState["openTasks"],
     goals: (goals.data ?? []) as RoutineState["goals"],
     projects: (projects.data ?? []) as RoutineState["projects"],
+    // só departamentos de projetos ativos
+    areas: ((areas.data ?? []) as NonNullable<RoutineState["areas"]>).filter((a) =>
+      (projects.data ?? []).some((p: { id: string }) => p.id === a.project_id),
+    ),
     openTimer: (timer.data ?? null) as RoutineState["openTimer"],
   };
 }
@@ -124,6 +129,7 @@ export async function runIngest(input: { channel: Channel; text: string; now?: D
       openTasks: routine.openTasks.map((t) => t.title),
       goals: routine.goals.map((g) => g.title),
       projects: routine.projects.map((p) => p.name),
+      areas: (routine.areas ?? []).map((a) => `${routine.projects.find((p) => p.id === a.project_id)?.name ?? "?"} › ${a.name}`),
       leads: routine.leads.map((l) => `${l.name}${l.business ? ` · ${l.business}` : ""} · ${l.stage}`),
       openTimer: routine.openTimer
         ? {

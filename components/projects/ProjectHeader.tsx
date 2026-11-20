@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ChevronLeft, Pencil, Play } from "lucide-react";
 import { useFocusMaybe } from "@/components/focus/FocusProvider";
+import { PriorityChip } from "@/components/ui/Priority";
 import { cn } from "@/lib/cn";
 import type { Project } from "@/lib/data/productivity";
 import { PROJECT_KIND_LABEL, projectHex } from "@/lib/projects-palette";
@@ -32,7 +33,10 @@ export function ProjectHeader({ project }: { project: Project }) {
           {project.name.trim().charAt(0).toUpperCase()}
         </span>
         <div className="flex min-w-0 flex-1 flex-col">
-          <h1 className="truncate font-display text-xl text-text-0">{project.name}</h1>
+          <h1 className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="min-w-0 font-display text-xl break-words text-text-0">{project.name}</span>
+            <PriorityChip value={project.priority} />
+          </h1>
           <p className="text-sm text-text-2">
             {PROJECT_KIND_LABEL[project.kind]} · {STATUS_LABEL[project.status]}
             {project.weekly_hours_goal ? ` · meta ${String(project.weekly_hours_goal).replace(".", ",")}h/semana` : ""}

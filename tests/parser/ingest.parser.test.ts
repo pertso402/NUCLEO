@@ -35,6 +35,8 @@ interface Expected {
   // projetos (Fase P): null = tem que vir null
   project_ref?: string | null;
   pomodoro?: boolean;
+  area_ref?: string | null;
+  priority?: "agora" | "alta" | "media" | "baixa";
   // pipeline
   count?: number;
   channel?: string;
@@ -56,6 +58,7 @@ const fixtures = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../fixtures
     openTasks: string[];
     goals: string[];
     projects?: string[];
+    areas?: string[];
     leads: string[];
     openTimer: { label: string | null; minutes: number } | null;
   };
@@ -115,6 +118,13 @@ function mismatches(call: ToolCall, exp: Expected): string[] {
   if (call.name === "start_timer" && exp.label_includes && !norm(call.args.label).includes(norm(exp.label_includes))) {
     out.push(`timer "${call.args.label}" sem "${exp.label_includes}"`);
   }
+  if (call.name === "add_task" && exp.area_ref !== undefined) {
+    // o servidor aceita "Projeto › Departamento"; compara só o departamento
+    const got = call.args.area_ref?.split("›").pop()?.trim() ?? null;
+    const ok = exp.area_ref === null ? got === null : got !== null && norm(got) === norm(exp.area_ref);
+    if (!ok) out.push(`departamento ${JSON.stringify(got)} ≠ ${JSON.stringify(exp.area_ref)}`);
+  }
+  if (call.name === "add_task" && exp.priority && call.args.priority !== exp.priority) out.push(`prioridade ${call.args.priority} ≠ ${exp.priority}`);
   if (call.name === "start_timer" && exp.pomodoro !== undefined && call.args.pomodoro !== exp.pomodoro) out.push(`pomodoro ${call.args.pomodoro} ≠ ${exp.pomodoro}`);
   if (exp.project_ref !== undefined && (call.name === "add_task" || call.name === "start_timer" || call.name === "log_time")) {
     const got = call.args.project_ref;

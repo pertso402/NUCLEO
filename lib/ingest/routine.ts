@@ -41,6 +41,31 @@ function pastOrToday(date: string | null, today: ISODate): ISODate {
 
 const shortList = (items: string[]) => items.slice(0, 4).map((t) => `"${t}"`).join(", ");
 
+const PRIORITY_OF = { agora: 0, alta: 1, media: 2, baixa: 3 } as const;
+
+/**
+ * Departamento citado (Fase P.8): procura no projeto informado; sem projeto, em todos os ativos.
+ * Não achou/ambíguo: segue sem departamento e avisa.
+ */
+export function resolveArea(
+  ref: string | null | undefined,
+  project: { id: string } | null,
+  ctx: ExecContext,
+): { area: { id: string; name: string; project_id: string; sequential: boolean } | null; note: string | null } {
+  if (!ref?.trim()) return { area: null, note: null };
+  // O modelo às vezes devolve "Projeto › Departamento" (formato da lista): usa as duas partes.
+  if (ref.includes("›")) {
+    const [projRef, ...rest] = ref.split("›");
+    const named = project ?? resolveProject(projRef, ctx).project;
+    return resolveArea(rest.join("›").trim(), named, ctx);
+  }
+  const pool = (ctx.routine.areas ?? []).filter((a) => !project || a.project_id === project.id);
+  const m = matchByName(pool, ref, (a) => a.name);
+  if (m && "item" in m) return { area: m.item, note: null };
+  if (m && "ambiguous" in m) return { area: null, note: `departamento "${ref}" existe em mais de um projeto, diga qual` };
+  return { area: null, note: `departamento "${ref}" não existe${project ? " nesse projeto" : ""}` };
+}
+
 /**
  * Projeto citado pelo Peter (Fase P). Não achou ou ficou ambíguo: segue sem projeto e avisa na resposta
  * (não trava a captura por causa disso).
@@ -64,7 +89,26 @@ export async function addTask(args: Args<"add_task">, ctx: ExecContext): Promise
   const goal = args.goal_ref ? matchByName(ctx.routine.goals, args.goal_ref, (g) => g.title) : null;
   const goalId = goal && "item" in goal ? goal.item.id : null;
   const title = args.title.trim();
-  const { project, note } = resolveProject(args.project_ref, ctx);
+  let { project, note } = resolveProject(args.project_ref, ctx);
+  const area = resolveArea(args.area_ref, project, ctx);
+  if (area.area && !project) {
+    project = ctx.routine.projects.find((p) => p.id === area.area!.project_id) ?? null;
+    note = null;
+  }
+  const priority = PRIORITY_OF[args.priority];
+  let sequence: number | null = null;
+  if (area.area) {
+    const { data: last } = await ctx.supabase
+      .from("tasks")
+      .select("sequence")
+      .eq("user_id", ctx.userId)
+      .eq("area_id", area.area.id)
+      .not("sequence", "is", null)
+      .order("sequence", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    sequence = last ? Number(last.sequence) + 1 : 0;
+  }
 
   const { data, error } = await ctx.supabase
     .from("tasks")
@@ -75,16 +119,30 @@ export async function addTask(args: Args<"add_task">, ctx: ExecContext): Promise
       moves_revenue: args.moves_revenue,
       goal_id: goalId,
       project_id: project?.id ?? null,
+      area_id: area.area?.id ?? null,
+      sequence,
+      priority,
       source: ctx.source,
     })
     .select("id")
     .single();
   if (error) throw new Error(`Falha ao criar tarefa: ${error.message}`);
   const id = data.id as string;
-  ctx.routine.openTasks.push({ id, title, due_on: dueOn, moves_revenue: args.moves_revenue, project_id: project?.id ?? null });
+  ctx.routine.openTasks.push({
+    id,
+    title,
+    due_on: dueOn,
+    moves_revenue: args.moves_revenue,
+    project_id: project?.id ?? null,
+    area_id: area.area?.id ?? null,
+    sequence,
+  });
 
   const parts = [`Tarefa: ${title}`];
-  if (project) parts.push(project.name);
+  if (project) parts.push(area.area ? `${project.name} › ${area.area.name}${area.area.sequential ? ` (etapa ${(sequence ?? 0) + 1})` : ""}` : project.name);
+  if (priority === 0) parts.push("🔥 agora");
+  else if (priority === 1) parts.push("prioridade alta");
+  if (area.note) parts.push(area.note);
   if (dueOn) parts.push(dayLabel(dueOn, today));
   if (args.moves_revenue) parts.push("mexe no faturamento");
   if (note) parts.push(note);
@@ -112,10 +170,20 @@ export async function completeTask(args: Args<"complete_task">, ctx: ExecContext
   if (error) throw new Error(`Falha ao concluir tarefa: ${error.message}`);
   ctx.routine.openTasks = open.filter((t) => t.id !== task.id);
 
+  // Em departamento com sequência: diz qual é a próxima etapa.
+  let nextLine = "";
+  const area = task.area_id ? (ctx.routine.areas ?? []).find((a) => a.id === task.area_id) : null;
+  if (area?.sequential) {
+    const next = ctx.routine.openTasks
+      .filter((t) => t.area_id === area.id)
+      .sort((a, b) => (a.sequence ?? Number.MAX_SAFE_INTEGER) - (b.sequence ?? Number.MAX_SAFE_INTEGER))[0];
+    nextLine = next ? `\n➡️ Próxima em ${area.name}: ${next.title}` : `\n🏁 ${area.name}: sequência concluída`;
+  }
+
   return {
     tool: "complete_task",
     ok: true,
-    line: `✅ Feita: ${task.title}${task.moves_revenue ? " · mexeu no faturamento" : ""}`,
+    line: `✅ Feita: ${task.title}${task.moves_revenue ? " · mexeu no faturamento" : ""}${nextLine}`,
     updated: [{ table: "tasks", id: task.id, before: { status: "todo", completed_at: null } }],
   };
 }

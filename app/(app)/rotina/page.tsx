@@ -5,7 +5,7 @@ import { RotinaTabs } from "@/components/routine/RotinaTabs";
 import { TaskBoard } from "@/components/routine/TaskBoard";
 import { TimeAnalytics } from "@/components/time/TimeAnalytics";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { loadFocus, loadProjects, loadProjectStats, loadTimeEntries, loadWorkTasks } from "@/lib/data/productivity";
+import { loadAreas, loadFocus, loadProjects, loadProjectStats, loadTimeEntries, loadWorkTasks } from "@/lib/data/productivity";
 import { loadHabits, type RotinaTab } from "@/lib/data/routine";
 import { formatLongDate, todayISO } from "@/lib/dates";
 
@@ -31,16 +31,16 @@ export default async function RotinaPage(props: PageProps<"/rotina">) {
   } else if (tab === "projetos") {
     body = <ProjectGrid projects={await loadProjectStats(now)} today={today} />;
   } else if (tab === "foco") {
-    const [tasks, focus] = await Promise.all([loadWorkTasks(now), loadFocus(now)]);
-    body = <FocusPanel tasks={tasks.open} focusGoalMinutes={focus.focusGoalMinutes} />;
+    const [tasks, focus, areas] = await Promise.all([loadWorkTasks(now), loadFocus(now), loadAreas()]);
+    body = <FocusPanel tasks={tasks.open} areas={areas} focusGoalMinutes={focus.focusGoalMinutes} />;
   } else if (tab === "tempo") {
     const [entries, projects, focus] = await Promise.all([loadTimeEntries(now), loadProjects(true), loadFocus(now)]);
     body = (
       <TimeAnalytics entries={entries} projects={projects} today={today} serverNow={now.toISOString()} focusGoalMinutes={focus.focusGoalMinutes} />
     );
   } else {
-    const [tasks, projects] = await Promise.all([loadWorkTasks(now), loadProjects()]);
-    body = <TaskBoard open={tasks.open} doneToday={tasks.doneToday} today={today} projects={projects} />;
+    const [tasks, projects, areas] = await Promise.all([loadWorkTasks(now), loadProjects(), loadAreas()]);
+    body = <TaskBoard open={tasks.open} doneToday={tasks.doneToday} today={today} projects={projects} areas={areas} />;
   }
 
   return (
